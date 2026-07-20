@@ -7,8 +7,8 @@
 - 작성 브랜치: `plan/event`
 - 최종 수정일: 2026-07-20
 - 담당 역할: Event
-- 문서 상태: **Draft (Program Review 대기)**
-- 참고 Program 문서: `origin/plan/program:docs/game-design/devops-tycoon-master-plan.md` (commit `a28fd84`)
+- 문서 상태: **Approved** (Program 승인 완료, 시간 수치는 Proposed 유지 — [program-decisions.md](../program-decisions.md))
+- 참고 Program 문서: `docs/game-design/devops-tycoon-master-plan.md`, `docs/game-design/program-decisions.md`
 
 ## 수치 상태 범례
 - **Confirmed**: Program 승인값 · **Proposed**: Event 제안 초기값 · **TBD**: 결정 필요([program-decisions-required.md](./program-decisions-required.md))
@@ -18,22 +18,22 @@
 
 | ID | 이름 | 유형 | 관련 기술 | 단계 | 상태 |
 |----|------|------|-----------|------|------|
-| EVT-LB-001 | Load Balancer 트래픽 불균형 | 기술 장애 | Load Balancer | 2~3 | Program Review |
-| EVT-APP-001 | App Server CPU 과부하 | 기술 장애 | App Scaling | 1~3 | Program Review |
-| EVT-APP-002 | App Server 메모리 부족 / Memory Leak | 기술 장애 | App Scaling | 2~3 | Program Review |
-| EVT-DB-001 | DB Connection Pool 고갈 | 기술 장애 | PostgreSQL | 2~3 | Program Review |
-| EVT-DB-002 | Slow Query | 기술 장애 | PostgreSQL | 2~3 | Program Review |
-| EVT-CACHE-001 | Redis Cache Miss 증가 | 기술 장애 | Redis | 3 | Program Review |
-| EVT-CACHE-002 | Cache Stampede | 기술 장애 | Redis | 3 | Program Review |
-| EVT-CACHE-003 | Stale Cache | 기술 장애 | Redis | 3 | Program Review |
-| EVT-DEP-001 | 배포 실패 | 운영 이벤트 | 수동 배포/CI·CD | 1~3 | Program Review |
-| EVT-SRV-001 | 서버 다운 | 기술 장애 | App/인프라 | 2~3 | Program Review |
-| EVT-HC-001 | Health Check 오작동 | 기술 장애 | Health Check | 2~3 | Program Review |
-| EVT-EXT-001 | 마케팅 캠페인 | 외부 상황 | 트래픽 | 2~3 | Program Review |
-| EVT-EXT-002 | 유명 인플루언서 언급 | 외부 상황 | 트래픽 | 2~3 | Program Review |
-| EVT-EXT-003 | Black Friday | 외부 상황 | 트래픽 | 3 | Program Review |
-| EVT-EXT-004 | 금요일 배포 | 외부 상황 | 배포 | 1~3 | Program Review |
-| EVT-EXT-005 | 클라우드 비용 증가 | 외부 상황 | 비용 | 2~3 | Program Review |
+| EVT-LB-001 | Load Balancer 트래픽 불균형 | 기술 장애 | Load Balancer | 2~3 | Approved |
+| EVT-APP-001 | App Server CPU 과부하 | 기술 장애 | App Scaling | 1~3 | Approved |
+| EVT-APP-002 | App Server 메모리 부족 / Memory Leak | 기술 장애 | App Scaling | 2~3 | Approved |
+| EVT-DB-001 | DB Connection Pool 고갈 | 기술 장애 | PostgreSQL | 2~3 | Approved |
+| EVT-DB-002 | Slow Query | 기술 장애 | PostgreSQL | 2~3 | Approved |
+| EVT-CACHE-001 | Redis Cache Miss 증가 | 기술 장애 | Redis | 3 | Approved |
+| EVT-CACHE-002 | Cache Stampede | 기술 장애 | Redis | 3 | Approved |
+| EVT-CACHE-003 | Stale Cache | 기술 장애 | Redis | 3 | Approved |
+| EVT-DEP-001 | 배포 실패 | 운영 이벤트 | 수동 배포/CI·CD | 1~3 | Approved |
+| EVT-SRV-001 | 서버 다운 | 기술 장애 | App/인프라 | 2~3 | Approved |
+| EVT-HC-001 | Health Check 오작동 | 기술 장애 | Health Check | 2~3 | Approved |
+| EVT-EXT-001 | 마케팅 캠페인 | 외부 상황 | 트래픽 | 2~3 | Approved |
+| EVT-EXT-002 | 유명 인플루언서 언급 | 외부 상황 | 트래픽 | 2~3 | Approved |
+| EVT-EXT-003 | Black Friday | 외부 상황 | 트래픽 | 3 | Approved |
+| EVT-EXT-004 | 금요일 배포 | 외부 상황 | 배포 | 1~3 | Approved |
+| EVT-EXT-005 | 클라우드 비용 증가 | 외부 상황 | 비용 | 2~3 | Approved |
 
 ---
 
@@ -111,7 +111,7 @@
 
 ### 미확정 사항 / Program 승인 상태
 - 미확정: 임계 수치 확정, 대응 제한 시간 절대값(GD-001 의존).
-- 승인 상태: Program Review.
+- 승인 상태: Approved (program-decisions.md).
 
 ---
 
@@ -184,7 +184,7 @@
 
 ### 미확정 사항 / Program 승인 상태
 - 미확정: CPU 임계·시간 확정.
-- 승인 상태: Program Review.
+- 승인 상태: Approved (program-decisions.md).
 
 ---
 
@@ -257,7 +257,7 @@
 
 ### 미확정 사항 / Program 승인 상태
 - 미확정: 누수 증가율 수치, 피로도 영향 계수.
-- 승인 상태: Program Review.
+- 승인 상태: Approved (program-decisions.md).
 
 ---
 
@@ -331,7 +331,7 @@
 
 ### 미확정 사항 / Program 승인 상태
 - 미확정: Critical 임계·성공 목표 수치, Read Replica 단계 게이트.
-- 승인 상태: Program Review.
+- 승인 상태: Approved (program-decisions.md).
 
 ---
 
@@ -404,7 +404,7 @@
 
 ### 미확정 사항 / Program 승인 상태
 - 미확정: 배수·빈도 임계 확정.
-- 승인 상태: Program Review.
+- 승인 상태: Approved (program-decisions.md).
 
 ---
 
@@ -476,7 +476,7 @@
 
 ### 미확정 사항 / Program 승인 상태
 - 미확정: Hit율 임계 확정.
-- 승인 상태: Program Review.
+- 승인 상태: Approved (program-decisions.md).
 
 ---
 
@@ -548,7 +548,7 @@
 
 ### 미확정 사항 / Program 승인 상태
 - 미확정: 동시성 임계의 상대 정의를 수치화(GD-001 의존).
-- 승인 상태: Program Review.
+- 승인 상태: Approved (program-decisions.md).
 
 ---
 
@@ -620,7 +620,7 @@
 
 ### 미확정 사항 / Program 승인 상태
 - 미확정: 신뢰도 하락 계수(GD-012 밸런스).
-- 승인 상태: Program Review.
+- 승인 상태: Approved (program-decisions.md).
 
 ---
 
@@ -692,7 +692,7 @@
 
 ### 미확정 사항 / Program 승인 상태
 - 미확정: 실패 확률·검증 저감 계수.
-- 승인 상태: Program Review.
+- 승인 상태: Approved (program-decisions.md).
 
 ---
 
@@ -764,7 +764,7 @@
 
 ### 미확정 사항 / Program 승인 상태
 - 미확정: 하드 장애 확률(억울한 발생 방지 위해 낮게), 복구 시간.
-- 승인 상태: Program Review.
+- 승인 상태: Approved (program-decisions.md).
 
 ---
 
@@ -834,7 +834,7 @@
 
 ### 미확정 사항 / Program 승인 상태
 - 미확정: 민감도 수치.
-- 승인 상태: Program Review.
+- 승인 상태: Approved (program-decisions.md).
 
 ---
 
@@ -905,7 +905,7 @@
 
 ### 미확정 사항 / Program 승인 상태
 - 미확정: 유입 배수·리드타임(EVT-D-001).
-- 승인 상태: Program Review.
+- 승인 상태: Approved (program-decisions.md).
 
 ---
 
@@ -976,7 +976,7 @@
 
 ### 미확정 사항 / Program 승인 상태
 - 미확정: 발동 확률·스파이크 배수.
-- 승인 상태: Program Review.
+- 승인 상태: Approved (program-decisions.md).
 
 ---
 
@@ -1013,16 +1013,17 @@
 | 당일 실시간 대응(수동) | 유연 | 실패 리스크, 피로도↑ |
 | 부분 기능 제한/대기열 | 붕괴 방지 | 매출·경험 일부 손실 |
 
-### 결과 판정
-- 성공 조건: 피크 기간 무중대장애 통과, 매출 극대화(마스터 플랜 단계3 승급 조건 연계).
-- 부분 성공 조건: 일부 장애/성능 저하 있었으나 서비스 유지.
-- 실패 조건: 카스케이딩 장애로 서비스 중단, 대규모 매출·신뢰 손실.
+### 결과 판정 (EVT-D-009 확정: 승급 정책 → program-decisions.md §2)
+- **Success:** 피크 기간 무중대장애 통과 + 회사 생존 + Postmortem 완료 → 단계3 승급.
+- **Partial Success:** 일부 장애/성능 저하 있었으나 핵심 서비스 복구 + 회사 생존 + Postmortem 완료 + 신뢰도 임계 이상 → **승급 가능**.
+- **Failure:** 회사 파산 / 장기 서비스 중단 / 데이터 유실 등 치명적 결과 → 승급 보류, 즉시 게임 오버 아님(복구 미션/재도전 제공).
 
 ### 결과 영향
 - 즉시 결과: 대규모 매출 기회.
 - 지연 후폭풍 (P6): 임시대응 남발 시 이후 부채·피로도 급증.
-- 보상: 성공 시 매출·투자자 신뢰 대폭 상승, 챕터 진행.
-- 페널티: 실패 시 대형 손실(게임 오버 근접 가능, 4.15).
+- 보상: Success 매출·투자자 신뢰 대폭↑(챕터 진행) / Partial 매출 중폭↑(신뢰 소폭↓, 부채·피로도↑).
+- 페널티: Failure 대형 손실(신뢰도 큰 폭↓) + 복구 미션 강제. 게임 오버는 파산/데이터 유실 확정 시에만(4.15).
+- 승급 조건(Success·Partial 공통): 이벤트 종료 + 회사 생존 + 핵심 서비스 복구(모든 핵심 노드 Healthy) + Postmortem 완료 + 사용자 **또는** 투자자 신뢰도 ≥ 최소 임계(Proposed, GD-009).
 
 ### 반복 제어
 - 쿨다운: 캠페인 스케줄 기반(연 1회성 성격) → 재무장 엄격.
@@ -1044,11 +1045,13 @@
 ### Acceptance Criteria
 - AC: Black Friday는 사전 카운트다운/준비 기간과 함께 고지되어야 한다.
 - AC: 사전 준비 조치 수준에 따라 피크 기간 장애 발생이 달라져야 한다.
-- AC: 피크 기간 무중대장애 통과 시 단계3 승급 조건에 기여해야 한다(Program 확인 필요).
+- AC: 피크 기간 무중대장애 통과 시 단계3 승급 조건을 충족해야 한다(EVT-D-009 Confirmed).
+- AC: 부분 성공(핵심 서비스 복구 + Postmortem + 신뢰도 임계 이상) 시에도 승급 가능해야 한다.
+- AC: Failure 시 즉시 게임 오버가 아니라 복구 미션/재도전이 제공되어야 한다.
 
 ### 미확정 사항 / Program 승인 상태
-- 미확정: 준비 기간(EVT-D-001), 피크 배수·지속, 승급 연계(Program).
-- 승인 상태: Program Review.
+- 미확정: 준비 기간 Tick 값(3일=900Tick, Proposed), 피크 배수·지속, 신뢰도 승급 임계(GD-009), 복구 미션 상세.
+- 승인 상태: **Approved** (EVT-D-009 확정, program-decisions.md §2·§3).
 
 ---
 
@@ -1060,7 +1063,7 @@
 - 이벤트 목적: 배포 타이밍의 위험(대응 인력·시간 제약)을 체감. "언제 배포하는가"도 의사결정.
 
 ### 발동 조건 (Trigger)
-- 게임 시간상 주말 직전(금요일 후반)에 배포를 실행할 때 리스크 수식 적용.
+- **EVT-D-006 Revised:** 실제 요일 개념을 도입하지 않고, **Tick 기반 주기적 "고위험 배포 슬롯"**에 배포를 실행할 때 리스크 수식 적용. "금요일"은 Frontend 표시용 은유이며 저장·판정은 Tick 슬롯 기준(결정론 유지).
 - 이 이벤트는 단독 장애가 아니라 EVT-DEP-001 실패 확률/대응 여건에 **수식(modifier)**으로 작용.
 
 ### 발동 제외 조건
@@ -1119,8 +1122,8 @@
 - AC: 주중 배포에는 이 수식이 적용되지 않아야 한다.
 
 ### 미확정 사항 / Program 승인 상태
-- 미확정: 게임 시간 단위(GD-001)와 "금요일" 정의, 수식 계수.
-- 승인 상태: Program Review.
+- 미확정: 주기 배포 슬롯의 위치·폭(Tick), 수식 계수(Proposed). "금요일" 정의는 EVT-D-006으로 Tick 슬롯 확정.
+- 승인 상태: Approved (program-decisions.md, EVT-D-006 Revised).
 
 ---
 
@@ -1193,7 +1196,7 @@
 
 ### 미확정 사항 / Program 승인 상태
 - 미확정: 비용 비중 임계, 외부 인상 확률.
-- 승인 상태: Program Review.
+- 승인 상태: Approved (program-decisions.md).
 
 ---
 
@@ -1235,3 +1238,4 @@
 | 버전 | 날짜 | 변경 내용 | 작성자 | 승인 상태 |
 |------|------|-----------|--------|-----------|
 | v0.1.0 | 2026-07-20 | MVP 이벤트 16종 + 연쇄 3종 최초 작성 | Event | Program Review 대기 |
+| v0.2.0 | 2026-07-20 | Program 승인 반영: 전 이벤트 Approved, EVT-EXT-003 승급 3결과 정책(EVT-D-009), EVT-EXT-004 주기 슬롯(EVT-D-006 Revised) | Program | Approved |

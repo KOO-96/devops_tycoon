@@ -162,19 +162,23 @@
 
 ## 4.5 게임 시간 구조
 
+> **GD-001 결정: 시간 구조는 Confirmed, 세부 수치는 Proposed.** 상세·근거는 [program-decisions.md §1](./program-decisions.md#1-gd-001--게임-시간-구조-confirmed) 참조.
+> 모든 시간은 **Tick(canonical)**으로 저장하며 Frontend가 게임 시간으로 변환 표시한다.
+
 | 항목 | 정의 | 상태 |
 |------|------|------|
-| 실시간 진행 | 게임은 실시간 Tick으로 진행(턴제 아님) | 확정(방향) |
-| 일시정지 | 시간 정지. 정지 중 관측/계획은 가능, 조치 실행 예약 가능. 시간 소요 조치는 재개 시 진행 | 확정(방향) |
-| 배속 1× / 2× / 4× | Tick 처리 속도 배율. UI 토글 | 확정(방향) |
-| 게임 Tick | 시뮬레이션 최소 시간 단위. 1 Tick당 실제 밀리초 = `TBD` | TBD |
-| 게임 시간 단위 | Tick 위 상위 단위(하루/스프린트) — 선택지 결정 필요 | TBD ([GD-001](#418-결정-필요-사항)) |
-| 이벤트 발생 시간 | 이벤트는 게임 시간 기준 스케줄/조건으로 발동 | 방향 확정, 수치 TBD |
-| 장애 대응 제한 시간 | 일부 장애는 제한 시간 내 미대응 시 악화. 기본값 `TBD` | TBD (plan/event) |
-| 개발 작업 소요 시간 | 기능별 소요 Tick. 기본값 `TBD` | TBD |
-| 배포 작업 소요 시간 | 배포 파이프라인 소요 Tick. 기본값 `TBD` | TBD |
+| 실시간 진행 | 게임은 실시간 기반 + 고정 Tick으로 진행(턴제 아님). 결과는 wall-clock이 아닌 Tick으로 계산 | **Confirmed** |
+| 일시정지(속도 0) | 시간 정지. 정지 중 관측/계획/명령 예약 가능. 시간 소요 조치는 재개 시 진행 | **Confirmed** |
+| 배속 1× / 2× / 4× | 같은 실제 프레임에서 처리하는 Tick 수 배율에만 영향. 계산 결과는 불변 | **Confirmed** |
+| 게임 Tick | 시뮬레이션의 원자적 결정론 단위. 1 Tick = 200 ms(1× 기준) | 구조 Confirmed / 값 Proposed |
+| 게임 시간 단위 | 1 게임일 = 300 Tick, 1 스프린트 = 7 게임일 | 구조 Confirmed / 값 Proposed |
+| 이벤트 발생 시간 | Tick 기준 스케줄/조건으로 발동. `duration_ticks`/`cooldown_ticks` 등 | 구조 Confirmed / 값 Proposed |
+| 장애 대응 제한 시간 | `response_window_ticks`. 상대등급 짧음/보통/긺 = 30/90/300 Tick | 구조 Confirmed / 값 Proposed |
+| 개발 작업 소요 시간 | `work_duration_ticks` | 구조 Confirmed / 값 Proposed |
+| 배포 작업 소요 시간 | `deploy_duration_ticks` | 구조 Confirmed / 값 Proposed |
 
 > **일시정지 정책:** 일시정지 중에도 플레이어는 분석·계획·조치 예약이 가능해야 한다(진단 게임 특성상). 단, 시간이 소요되는 조치의 실제 진행은 재개 후 이루어진다.
+> **저장·복원:** `current_tick`, `simulation_time`, `speed`, `paused`, `rng_state`를 영속화하며, 복원 후 동일 Tick 진행 시 동일 결과를 보장한다(Simulation 재현성).
 
 ---
 
@@ -519,17 +523,17 @@ MVP에서 최소 2명의 CTO를 정의한다.
 
 ## 4.18 결정 필요 사항
 
-확정되지 않은 항목은 임의 확정하지 않고 아래에 기록한다.
+확정되지 않은 항목은 임의 확정하지 않고 아래에 기록한다. **결정 완료 항목은 [program-decisions.md](./program-decisions.md)에서 관리한다.**
 
 | ID | 결정 항목 | 선택지 | 권장안 | 영향 범위 | 결정 필요자 |
 |----|-----------|--------|--------|-----------|-------------|
-| GD-001 | 게임 시간 단위 | 실시간 / 하루 / 스프린트 | 실시간+배속 | Simulation, Frontend | Program, DevCTO |
+| GD-001 | 게임 시간 단위 | 실시간 / 하루 / 스프린트 | **✅ Confirmed: 실시간+고정 Tick+배속** (수치 Proposed, [program-decisions.md §1](./program-decisions.md#1-gd-001--게임-시간-구조-confirmed)) | Simulation, Frontend | Program, DevCTO |
 | GD-002 | `dev` 브랜치 부재 | (해결됨) main 기준 dev 신규 생성·push | main→dev 생성 완료 | 전체 협업 | DevCTO |
 | GD-003 | `review/devcto` 브랜치 부재 | 사전 생성 / PR 시 자동 / 정책 확정 | PR 전 dev 기준 생성 | 협업 규칙 | DevCTO |
-| GD-004 | 1 Tick당 실제 시간(ms) | TBD | Simulation 밸런싱 후 확정 | Simulation, Frontend | Simulation |
+| GD-004 | 1 Tick당 실제 시간(ms) | TBD | Proposed 200ms (구조 확정, 값은 플레이테스트) | Simulation, Frontend | Simulation |
 | GD-005 | 자원 초기값·변화 계수 | TBD | 플레이테스트 기반 확정 | Simulation | Simulation, Program |
 | GD-006 | 성장 단계 승급 임계 | TBD | 캠페인 밸런싱 후 확정 | Simulation, Event | Program |
-| GD-007 | 장애 대응 제한 시간 | TBD | 이벤트별 개별 정의 | Event, Simulation | Event |
+| GD-007 | 장애 대응 제한 시간 | TBD | **✅ Confirmed: 이벤트별 개별(`response_window_ticks`)** 값 Proposed (EVT-D-004) | Event, Simulation | Event |
 | GD-008 | 카메라 줌 최소/최대 배율 | TBD | UX 프로토타입 후 확정 | Frontend | Frontend |
 | GD-009 | 신뢰도/파산 붕괴 임계 | TBD | 밸런싱 후 확정 | Simulation | Program, Simulation |
 | GD-010 | API/WS 이벤트 상세 스키마 | TBD | Backend/Sim 합의 후 별도 문서화 | Backend, Frontend, Simulation | Backend |
@@ -543,6 +547,7 @@ MVP에서 최소 2명의 CTO를 정의한다.
 | 버전 | 날짜 | 변경 내용 | 작성자 | 승인 상태 |
 |------|------|-----------|--------|-----------|
 | v0.1.0 | 2026-07-20 | 통합 기획안 최초 작성(4.1~4.19 전 항목). 그린필드 저장소 기준. `dev` 브랜치 신규 생성. | Program | Draft (검토 대기) |
+| v0.2.0 | 2026-07-20 | GD-001 게임 시간 구조 Confirmed(4.5 갱신), EVT-D-001~010 결정 반영, GD-004/GD-007 상태 갱신. plan/event 병합. [program-decisions.md](./program-decisions.md) 신설. | Program | Approved |
 
 ---
 

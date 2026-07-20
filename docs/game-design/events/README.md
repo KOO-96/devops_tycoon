@@ -39,10 +39,10 @@
 | 문서 | 설명 | 상태 |
 |------|------|------|
 | [event-design-standard.md](./event-design-standard.md) | 모든 이벤트 공통 템플릿·ID·수치 규칙 | Draft |
-| [mvp-event-catalog.md](./mvp-event-catalog.md) | MVP 이벤트 16종 + 연쇄 3종 상세 | Draft (Program Review 대기) |
-| [technology-trigger-matrix.md](./technology-trigger-matrix.md) | 문제↔기술 도입 관계 매트릭스 | Draft (Program Review 대기) |
+| [mvp-event-catalog.md](./mvp-event-catalog.md) | MVP 이벤트 16종 + 연쇄 3종 상세 | **Approved** (수치 Proposed) |
+| [technology-trigger-matrix.md](./technology-trigger-matrix.md) | 문제↔기술 도입 관계 매트릭스 | **Approved** |
 | [post-mvp-event-backlog.md](./post-mvp-event-backlog.md) | Post-MVP 기술·이벤트 백로그 | Draft |
-| [program-decisions-required.md](./program-decisions-required.md) | Program 결정 필요 사항 | Draft |
+| [program-decisions-required.md](./program-decisions-required.md) | Program 결정 필요 사항(결정 완료) | **Resolved** → [../program-decisions.md](../program-decisions.md) |
 
 ## 이벤트 상태
 

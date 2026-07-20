@@ -1,14 +1,31 @@
 # Program 결정 필요 사항 (Event → Program)
 
 > Event 담당자가 단독으로 확정할 수 없는 항목을 정리한다. 임의 확정하지 않으며, Program 승인 후 각 문서의 수치 상태를 `Proposed → Confirmed`로 갱신한다.
+>
+> ✅ **2026-07-20 Program 결정 완료:** EVT-D-001~010 모두 처리됨(Confirmed 9 / Revised 1). 최종 결정 및 근거는 **[../program-decisions.md](../program-decisions.md)**를 정본으로 참조. 아래 §1.1에 결과 요약.
 
-- 문서 버전: v0.1.0
-- 작성 브랜치: `plan/event`
+- 문서 버전: v0.2.0
+- 작성 브랜치: `plan/event` → `plan/program`(병합·결정 반영)
 - 최종 수정일: 2026-07-20
-- 담당 역할: Event
-- 참고 Program 문서: `origin/plan/program:...master-plan.md` (commit `a28fd84`)
+- 담당 역할: Event(요청) / Program(결정)
+- 참고 Program 문서: `docs/game-design/devops-tycoon-master-plan.md`, `docs/game-design/program-decisions.md`
 
-## 1. 결정 요청 표
+## 1.1 Program 결정 결과 요약
+
+| ID | 최종 결정 | 상태 |
+|----|-----------|------|
+| EVT-D-001 | 준비 기간 3 게임일 기본(Easy7/Hard1), Tick 정규화 | Confirmed(값 Proposed) |
+| EVT-D-002 | 이벤트 중 일시정지 제한 허용 | Confirmed |
+| EVT-D-003 | 실시간+고정 Tick+배속(GD-001) | Confirmed(값 Proposed) |
+| EVT-D-004 | 대응 제한 시간 이벤트별 개별(`response_window_ticks`) | Confirmed |
+| EVT-D-005 | 신뢰도/보상 이벤트당 상한 | Confirmed(값 Proposed) |
+| EVT-D-006 | "금요일 배포" → Tick 기반 주기 슬롯(요일 미도입) | **Revised** |
+| EVT-D-007 | 확률 발동 허용(Seed 기반) | Confirmed |
+| EVT-D-008 | 최대 연쇄 깊이 4 | Confirmed |
+| EVT-D-009 | Black Friday 승급 연계(부분 성공 승급 허용) | Confirmed(임계 Proposed) |
+| EVT-D-010 | 밸런스 수치 설정 파일 분리 | Confirmed |
+
+## 1. 결정 요청 표 (원본, 참고용)
 
 | ID | 결정 항목 | 선택지 | Event 권장안 | 영향 범위 | 결정 필요자 |
 |----|-----------|--------|--------------|-----------|-------------|
@@ -48,11 +65,13 @@
 ## 4. Program 기획과의 정렬/미해결
 
 - **정렬됨:** 노드 상태(Healthy/Warning/Critical/Down), EV-1~10 승인 게이트, DB Connection Warning 80%, Seed 결정론, MVP 범위(4.8), CTO 성향(가디언/부스터).
-- **미해결(Program 결정 대기):** 위 EVT-D-001~010. 특히 GD-001(시간 단위) 확정 전에는 모든 절대 시간 수치가 TBD로 남는다.
-- **충돌 발견:** 현재 Program 기획과의 **직접 충돌 없음.** 향후 충돌 발견 시 이 절에 기록하고 임의로 덮어쓰지 않는다.
+- **해결됨(2026-07-20 Program 결정):** EVT-D-001~010 전부 처리. GD-001 시간 구조 Confirmed로 모든 시간 수치를 Tick으로 정규화(값은 Proposed). 정본: [../program-decisions.md](../program-decisions.md).
+- **남은 TBD:** Tick 절대값(200ms), 1게임일=300Tick, 대응창/쿨다운 Tick 값, 신뢰도 승급 임계(GD-009), 이벤트당 Δ상한(EVT-D-005) → 모두 Simulation 플레이테스트 대상.
+- **충돌 발견:** 현재 Program 기획과의 **직접 충돌 없음.**
 
 ## 변경 기록
 
 | 버전 | 날짜 | 변경 내용 | 작성자 | 승인 상태 |
 |------|------|-----------|--------|-----------|
 | v0.1.0 | 2026-07-20 | Program 결정 요청 10건 + 대표 수치 정리 | Event | Draft |
+| v0.2.0 | 2026-07-20 | Program 결정 결과 요약(§1.1) 반영, 미해결→해결 갱신 | Program | Approved |

@@ -14,6 +14,8 @@
 | 문서 | 설명 | 담당 역할 |
 |------|------|-----------|
 | [devops-tycoon-master-plan.md](./devops-tycoon-master-plan.md) | 통합 게임 기획안(게임 개요·핵심 루프·MVP·역할별 요구사항·AC·결정 필요 사항) | Program |
+| [program-decisions.md](./program-decisions.md) | Program 승인 결정 정본(GD-001 시간 구조, EVT-D-001~010) | Program |
+| [events/](./events/) | 이벤트 기획 문서 세트(카탈로그·표준·매트릭스·백로그) | Event |
 | README.md (본 문서) | 기획 문서 진입점·갱신 규칙·검토 절차 | Program |
 
 향후 추가 예정(별도 브랜치/담당):
