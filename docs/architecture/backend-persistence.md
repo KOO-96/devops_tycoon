@@ -10,10 +10,13 @@ PostgreSQL is the durable **source of truth**. Redis is a transport only.
 `simulation_state_version`, `revision` (BIGINT), `next_command_sequence` (BIGINT),
 `created_at`, `updated_at`.
 
-**game_commands** — `id`, `session_id` (FK), `command_id`, `sequence`,
-`command_type`, `payload_hash`, `status`, `result` (JSONB), `created_at`,
-`completed_at`. Constraints: `UNIQUE(session_id, command_id)`,
-`UNIQUE(session_id, sequence)`, index on `session_id`.
+**game_commands** — `id` (**surrogate UUID primary key**), `session_id` (FK),
+`command_id` (client idempotency key), `sequence`, `command_type`, `payload_hash`,
+`status`, `result` (JSONB), `created_at`, `completed_at`. Constraints:
+`PRIMARY KEY(id)`, `UNIQUE(session_id, command_id)`, `UNIQUE(session_id, sequence)`,
+index on `session_id`. **`command_id` has no global unique/PK constraint** — it is
+unique only within a session (HIGH-3), so two sessions may reuse the same
+`command_id` independently.
 
 **game_events** — `cursor` (BIGINT Identity PK), `event_id` (UNIQUE), `session_id`
 (FK), `session_revision`, `tick`, `event_type`, `target`, `payload` (JSONB),
@@ -33,12 +36,17 @@ by `event_id` and/or `cursor`.
 
 ## Idempotency (BACK-FU-001)
 
-- Backend assigns `sequence` and persists permanent results in `game_commands`.
+- Backend assigns `sequence` and persists permanent results in `game_commands`
+  under a **surrogate UUID `id`**; `command_id` is the client idempotency key,
+  scoped to a session. **Idempotency look-ups always key on
+  `(session_id, command_id)`**, never `command_id` alone — different sessions may
+  reuse the same `command_id` (HIGH-3).
 - The idempotency **request hash** = `command_type` + canonical `payload` (excludes
   `expected_revision`, request id, timestamps, and the backend `sequence`).
-- Look-up precedes the revision check: same `command_id` + same request hash →
-  original stored result (no re-run), even if `expected_revision` is stale (HIGH-1).
-- Same `command_id` + different `command_type`/payload → `IDEMPOTENCY_CONFLICT`.
+- Look-up precedes the revision check: same `(session_id, command_id)` + same request
+  hash → original stored result (no re-run), even if `expected_revision` is stale (HIGH-1).
+- Same `(session_id, command_id)` + different `command_type`/payload → `IDEMPOTENCY_CONFLICT`
+  (scoped to that session only).
 - `UNIQUE(session_id, command_id)` and `UNIQUE(session_id, sequence)` guard against
   duplicates under races (verified with concurrent same-id requests on real PG).
 - The simulation additionally keeps its own sequence watermark + bounded recent

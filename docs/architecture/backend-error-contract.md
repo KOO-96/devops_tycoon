@@ -45,6 +45,11 @@ location/type, not raw values.
   `status = COMMAND_REJECTED` + `reason_code` (e.g. `server_not_found`).
 - Genuine input errors and server faults use the error envelope above.
 - Never hide a server fault inside a domain event; never persist partial state.
+- Command identity is `(session_id, command_id)`; the DB primary key is a surrogate
+  UUID, so a shared `command_id` across sessions does **not** cause a
+  constraint collision. Any *unexpected* `IntegrityError` still rolls the whole
+  transaction back and is mapped to a generic `INTERNAL_ERROR` (no SQL / driver
+  strings, DB/Redis URLs, or file paths in the response).
 
 ## Security (deferred — NOT production-ready)
 
