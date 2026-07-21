@@ -3,12 +3,12 @@
 > "어떤 문제가 어떤 기술의 필요성을 만드는가"를 표로 정리한다.
 > **하나의 문제에 하나의 정답만 연결하지 않는다**(마스터 플랜 P4). 각 대응은 비용·시간·효과·부작용이 다르다.
 
-- 문서 버전: v0.1.0
+- 문서 버전: v0.2.0
 - 작성 브랜치: `plan/event`
-- 최종 수정일: 2026-07-20
+- 최종 수정일: 2026-07-21
 - 담당 역할: Event
-- 문서 상태: **Draft (Program Review 대기)**
-- 참고 Program 문서: `origin/plan/program:...master-plan.md` (commit `a28fd84`)
+- 문서 상태: **Approved**
+- 참고 Program 문서: `docs/game-design/devops-tycoon-master-plan.md`, `docs/game-design/program-decisions.md`
 - 관련 이벤트: [mvp-event-catalog.md](./mvp-event-catalog.md)
 
 ## 읽는 법
@@ -70,3 +70,4 @@
 | 버전 | 날짜 | 변경 내용 | 작성자 | 승인 상태 |
 |------|------|-----------|--------|-----------|
 | v0.1.0 | 2026-07-20 | 기술 트리거 매트릭스 최초 작성(15행 + 복수정답 예시) | Event | Program Review 대기 |
+| v0.2.0 | 2026-07-21 | Program/DevCTO 승인 완료. 상태 → Approved. | DevCTO | Approved |

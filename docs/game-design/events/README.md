@@ -24,7 +24,7 @@
 
 ## Simulation 담당자에게 전달되는 내용
 
-- 각 이벤트의 발동/제외 조건, 사전 징후 지표, 대응별 효과·후폭폭, 성공·실패 판정 기준
+- 각 이벤트의 발동/제외 조건, 사전 징후 지표, 대응별 효과·후폭풍, 성공·실패 판정 기준
 - 각 이벤트의 **Simulation 인터페이스**(필요 입력 / 출력해야 하는 결과)
 - 파생 병목(P6) 전가 관계와 연쇄 구조(CHN-001~003), 최대 연쇄 깊이
 - 모든 수치는 상태 라벨(Confirmed/Proposed/TBD)과 함께 전달. 밸런스 데이터(설정 파일)로 분리 가능하도록 정의
@@ -38,7 +38,7 @@
 
 | 문서 | 설명 | 상태 |
 |------|------|------|
-| [event-design-standard.md](./event-design-standard.md) | 모든 이벤트 공통 템플릿·ID·수치 규칙 | Draft |
+| [event-design-standard.md](./event-design-standard.md) | 모든 이벤트 공통 템플릿·ID·수치 규칙 | **Approved** |
 | [mvp-event-catalog.md](./mvp-event-catalog.md) | MVP 이벤트 16종 + 연쇄 3종 상세 | **Approved** (수치 Proposed) |
 | [technology-trigger-matrix.md](./technology-trigger-matrix.md) | 문제↔기술 도입 관계 매트릭스 | **Approved** |
 | [post-mvp-event-backlog.md](./post-mvp-event-backlog.md) | Post-MVP 기술·이벤트 백로그 | Draft |
