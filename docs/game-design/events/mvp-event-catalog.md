@@ -12,7 +12,8 @@
 
 ## 수치 상태 범례
 - **Confirmed**: Program 승인값 · **Proposed**: Event 제안 초기값 · **TBD**: 결정 필요([program-decisions-required.md](./program-decisions-required.md))
-- 절대 시간이 필요한 값은 게임 시간 단위(GD-001) 미확정으로 대부분 `TBD`이며, 상대적 여유(짧음/보통/긺)를 병기한다.
+- **GD-001 시간 구조는 Confirmed**(실시간+고정 Tick+배속, [../program-decisions.md §1](../program-decisions.md)). 모든 시간은 **Tick 단위로 저장**하며, 상대적 여유(짧음/보통/긺)는 `response_window_ticks` 30/90/300으로 정규화된다.
+- 시간 관련 **절대 수치는 Proposed**(플레이테스트 조정 대상)이며 설정 파일(BalanceConfig)로 분리한다(EVT-D-010). 더 이상 GD-001 미확정으로 인한 TBD가 아니다.
 
 ## 이벤트 목록
 
@@ -64,7 +65,7 @@
 - 모니터링 있을 때: 서버별 Request Rate/CPU/Queue 비교 그래프로 편중 서버 특정 가능.
 
 ### 대응 제한 시간 (Response Window)
-- Proposed: 보통. 방치 시 편중 서버가 Critical → 오류율 급증. (절대값 TBD, GD-001 의존)
+- Proposed: 보통. 방치 시 편중 서버가 Critical → 오류율 급증. (절대값 Proposed, `response_window_ticks`로 정규화)
 
 ### 가능한 대응 방법 (≥2)
 | 대응 | 장점 | 부작용/비용/복잡도 |
@@ -110,7 +111,7 @@
 - AC: 동일 Seed·명령 순서에서 동일하게 발동/판정되어야 한다.
 
 ### 미확정 사항 / Program 승인 상태
-- 미확정: 임계 수치 확정, 대응 제한 시간 절대값(GD-001 의존).
+- 미확정: 임계 수치 확정, 대응 제한 시간 절대값은 Proposed(플레이테스트 조정).
 - 승인 상태: Approved (program-decisions.md).
 
 ---
@@ -547,7 +548,7 @@
 - AC: 동일 Seed·명령 순서에서 동일 타이밍에 발동해야 한다.
 
 ### 미확정 사항 / Program 승인 상태
-- 미확정: 동시성 임계의 상대 정의를 수치화(GD-001 의존).
+- 미확정: 동시성 임계 수치화는 Proposed(플레이테스트 조정).
 - 승인 상태: Approved (program-decisions.md).
 
 ---
@@ -1239,3 +1240,4 @@
 |------|------|-----------|--------|-----------|
 | v0.1.0 | 2026-07-20 | MVP 이벤트 16종 + 연쇄 3종 최초 작성 | Event | Program Review 대기 |
 | v0.2.0 | 2026-07-20 | Program 승인 반영: 전 이벤트 Approved, EVT-EXT-003 승급 3결과 정책(EVT-D-009), EVT-EXT-004 주기 슬롯(EVT-D-006 Revised) | Program | Approved |
+| v0.3.0 | 2026-07-20 | 정합성 수정: GD-001 미확정 서술 제거, 시간 구조 Confirmed·절대 수치 Proposed 정책으로 갱신 | Program | Approved |
