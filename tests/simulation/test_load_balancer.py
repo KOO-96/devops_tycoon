@@ -8,7 +8,7 @@ from simulation.nodes.load_balancer import LoadBalancer
 from simulation.requests.router import distribute, imbalance_metric
 
 
-def _servers(n: int) -> list:
+def _servers(n: int) -> list[AppServer]:
     return [AppServer(id=f"app-{i}") for i in range(1, n + 1)]
 
 

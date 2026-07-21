@@ -5,6 +5,7 @@ import unittest
 from simulation.commands import CommandType
 from simulation.engine import step
 from simulation.factory import new_config, new_state
+
 from tests.simulation._helpers import build_cluster, make_command
 
 
@@ -23,7 +24,9 @@ class TestCommands(unittest.TestCase):
         add = make_command("dup2", CommandType.ADD_NODE, "app-1", node_kind="app_server")
         r1 = step(state, [add], config, ticks=0)
         # Re-issuing the same id must not add a second node.
-        remove_then_readd = make_command("dup2", CommandType.ADD_NODE, "app-2", node_kind="app_server")
+        remove_then_readd = make_command(
+            "dup2", CommandType.ADD_NODE, "app-2", node_kind="app_server"
+        )
         r2 = step(r1.state, [remove_then_readd], config, ticks=0)
         self.assertEqual(len(r2.state.app_servers), 1)
         self.assertIn("app-1", r2.state.app_servers)

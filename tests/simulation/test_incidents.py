@@ -5,10 +5,12 @@ import unittest
 from simulation.commands import CommandType
 from simulation.engine import step
 from simulation.incidents.models import IncidentPhase
+from simulation.state import GameState
+
 from tests.simulation._helpers import build_cluster, make_command
 
 
-def _incident_types(state) -> set:  # type: ignore[no-untyped-def]
+def _incident_types(state: GameState) -> set[str]:
     return {inc.type.value for inc in state.incidents.active.values()}
 
 
@@ -20,7 +22,8 @@ class TestIncidents(unittest.TestCase):
         cfg = config.with_overrides({"request_cpu_cost": 0.05})
         result = step(state, [], cfg, ticks=1)
         cpu_incidents = [
-            inc for inc in result.state.incidents.active.values()
+            inc
+            for inc in result.state.incidents.active.values()
             if inc.type.value == "APP_CPU_OVERLOAD"
         ]
         self.assertTrue(cpu_incidents)
@@ -31,7 +34,8 @@ class TestIncidents(unittest.TestCase):
         cfg = config.with_overrides({"request_cpu_cost": 0.05})
         result = step(state, [], cfg, ticks=5)
         active = [
-            inc for inc in result.state.incidents.active.values()
+            inc
+            for inc in result.state.incidents.active.values()
             if inc.type.value == "APP_CPU_OVERLOAD" and inc.phase == IncidentPhase.ACTIVE
         ]
         self.assertTrue(active, "sustained overload should reach ACTIVE")

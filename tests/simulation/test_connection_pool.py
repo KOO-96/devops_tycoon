@@ -5,6 +5,7 @@ import unittest
 from simulation.commands import CommandType
 from simulation.engine import step
 from simulation.resources.connection_pool import allocate_connections
+
 from tests.simulation._helpers import build_cluster, make_command
 
 

@@ -4,6 +4,7 @@ import unittest
 
 from simulation.engine import step
 from simulation.serialization import clone_state, state_from_json, state_to_json
+
 from tests.simulation._helpers import build_cluster
 
 

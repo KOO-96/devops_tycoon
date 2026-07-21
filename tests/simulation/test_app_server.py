@@ -7,6 +7,7 @@ from simulation.nodes.base import Health
 from simulation.resources.cpu import cpu_usage
 from simulation.resources.memory import memory_usage
 from simulation.resources.queue import drain_queue
+
 from tests.simulation._helpers import build_cluster
 
 

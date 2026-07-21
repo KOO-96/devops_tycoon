@@ -4,6 +4,7 @@ import unittest
 
 from simulation.engine import step
 from simulation.rng import Rng
+
 from tests.simulation._helpers import build_cluster
 
 
@@ -42,7 +43,8 @@ class TestEngineReproducibility(unittest.TestCase):
         a = step(state_a, [], cfg, ticks=30)
         b = step(state_b, [], cfg, ticks=30)
         self.assertNotEqual(
-            a.state.economy.to_dict(), b.state.economy.to_dict(),
+            a.state.economy.to_dict(),
+            b.state.economy.to_dict(),
             "different seeds with jitter should diverge",
         )
 

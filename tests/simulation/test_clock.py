@@ -5,6 +5,7 @@ import unittest
 from simulation.clock import Clock
 from simulation.commands import CommandType
 from simulation.engine import step
+
 from tests.simulation._helpers import build_cluster, make_command
 
 

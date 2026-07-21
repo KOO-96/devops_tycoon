@@ -4,6 +4,7 @@ import math
 import unittest
 
 from simulation.engine import step
+
 from tests.simulation._helpers import build_cluster
 
 
