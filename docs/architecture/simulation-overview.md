@@ -1,10 +1,28 @@
 # Simulation Overview
 
-- Version: v0.1.0 (MVP Simulation Foundation)
+- Version: v0.2.0 (MVP Simulation Foundation — Ops-review fixes)
 - Branch: `agent/simulation`
 - Status: Draft (for review/devcto)
+- Runtime: Python 3.11+ (verified on 3.12)
 - Basis: `docs/game-design/devops-tycoon-master-plan.md`, `docs/game-design/program-decisions.md`,
   `docs/game-design/events/*` (all Approved)
+
+## v0.2 corrections (Ops review)
+
+- **D1 Step events**: events emitted during a step are captured in a dedicated
+  sink (`EventLog.begin_capture`/`end_capture`), never inferred from list
+  indices, so they survive ring-buffer trimming.
+- **D2 Connected data routing**: each app server routes to its *connected*
+  cache/DB via `GameState.resolve_data_path`; unconnected nodes are untouched.
+- **D3 No phantom datastore**: DB-required requests with no reachable DB emit
+  `REQUEST_FAILED` (reason `DATABASE_NOT_CONNECTED`), are not completed, and earn
+  no revenue.
+- **D4 Cache eviction**: capacity overflow evicts entries and emits
+  `CACHE_EVICTION`; capacity affects hit rate; `used_entries <= capacity`.
+- **D5 Command idempotency**: sequence watermark + bounded recent-id ledger
+  (Backend owns permanent idempotency).
+- **D6 State version**: unsupported versions raise `UnsupportedStateVersionError`.
+- **D7 Tick args**: negative `ticks` raises `ValueError`; `0` = no advance.
 
 ## Responsibility & boundaries
 
@@ -37,8 +55,9 @@ result = step(state, commands, config, ticks=1)
 ## Command processing order
 
 1. Commands are applied **once per step**, in list order, before any tick advances.
-2. Each command id is recorded; a duplicate id is rejected without mutating game
-   state (idempotency, sim prompt §11).
+2. Idempotency: sequenced commands use a watermark; unsequenced fall back to a
+   bounded recent-id window. Duplicates / out-of-order / past sequences are
+   rejected without mutating game state (see backend contract).
 3. Invalid commands (unknown node, disallowed edge, bad speed) are rejected and
    emit `COMMAND_REJECTED`; valid ones emit `COMMAND_APPLIED`.
 
@@ -51,7 +70,9 @@ A paused clock (speed 0 or `paused=True`) processes zero ticks.
 2. **Route** — load balancer distributes to available app servers
    (round-robin / weighted / least-conn; sticky or skewed weights → imbalance).
 3. **App servers** — CPU, memory, queue drain, timeouts per server.
-4. **Data layer** — cache hit/miss, then DB connection pool allocation and DB CPU.
+4. **Data layer (per connected node)** — each app's processed requests flow
+   through its `resolve_data_path` cache (hit/miss/eviction) and DB (pool, CPU).
+   DB-required requests with no reachable DB fail (`REQUEST_FAILED`).
 5. **Economy** — revenue from completed requests, cost from running nodes, cash.
 6. **Incidents** — collect signals from observable metrics → advance the incident
    state machine (WARNING → ACTIVE → RECOVERING → RECOVERED).
@@ -60,9 +81,11 @@ A paused clock (speed 0 or `paused=True`) processes zero ticks.
 
 ## Domain event vs incident state
 
-- **Domain events** are momentary facts (`CACHE_HIT`, `CONNECTION_POOL_EXHAUSTED`,
-  `REQUEST_TIMEOUT`). They live in a bounded ring buffer (default 500) so long runs
-  never grow unbounded.
+- **Domain events** are momentary facts (`CACHE_HIT`, `CACHE_EVICTION`,
+  `CONNECTION_POOL_EXHAUSTED`, `REQUEST_FAILED`, `REQUEST_TIMEOUT`). They live in a
+  bounded ring buffer (default 500) so long runs never grow unbounded. A step
+  additionally returns *all* events it emitted via a capture sink, independent of
+  ring-buffer trimming (D1).
 - **Incidents** are persistent conditions with a lifecycle, keyed by
   `(type, target)` so the same failure is never re-emitted every tick. Every
   incident passes through `WARNING` before `ACTIVE`, guaranteeing an observable

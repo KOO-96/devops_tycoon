@@ -1,7 +1,8 @@
 # Simulation ↔ Backend Contract
 
-- Version: v0.1.0
+- Version: v0.2.0
 - Status: Draft (for review/devcto)
+- Runtime: Python 3.11+
 
 > This documents the **domain input/output requirements** of the simulation.
 > It does not fix the public API/WebSocket schema — Backend owns that draft
@@ -33,21 +34,44 @@
 
 Backend must **not** recompute or mutate any of these values.
 
-## Command idempotency
+## Command idempotency (D5 — DevCTO decision)
 
-- A command `id` is applied at most once. Re-sending the same `id` is safe and
-  yields `COMMAND_REJECTED` with reason `duplicate_command_id`; game state is
-  unchanged.
-- Backend should therefore assign a stable id per player action and may retry
-  delivery freely.
+Ownership boundary:
+
+- **Backend owns permanent idempotency.** It assigns each command a monotonic
+  `sequence` (per session) and persists its own idempotency results.
+- **Simulation keeps a sequence watermark** (`last_applied_command_sequence`)
+  plus a **bounded recent-id ledger** (`recent_command_ids`, size from
+  `command_ledger_size`). The watermark blocks re-application even after an id
+  ages out of the bounded window; the recent ledger is for short-term debugging /
+  duplicate replies.
+
+Sequence policy (`Command.sequence >= 0`):
+
+| Condition | Result (`COMMAND_REJECTED.reason`) | Sequence consumed? |
+|-----------|-------------------------------------|--------------------|
+| `sequence < expected` | `already_applied` | no |
+| `sequence > expected` | `command_out_of_order` | **no** (may arrive later) |
+| `sequence == expected` | applied (success or valid rejection) | **yes** |
+| duplicate `id` in window | `duplicate_command_id` | no |
+
+- A command that passes format/target validation consumes its sequence whether
+  the handler succeeds or is validly rejected. Undeserializable commands must be
+  rejected by Backend before reaching the simulation.
+- `sequence < 0` (unsequenced) falls back to best-effort id dedup within the
+  recent window only — sequenced commands are authoritative.
+- The watermark and recent ledger survive save/restore.
 
 ## Error handling
 
 - Validation failures do not raise; they emit `COMMAND_REJECTED` events with a
   machine-readable `reason` (e.g. `connection_not_allowed`, `invalid_speed`,
   `node_not_found`). Backend surfaces these; game state stays consistent.
-- The engine raises only on programmer error (e.g. an unknown balance key via
-  `with_overrides`), never on player input.
+- DB-required requests with no reachable datastore emit `REQUEST_FAILED`
+  (`reason = DATABASE_NOT_CONNECTED`); they are not completed and earn no revenue.
+- The engine **raises** on: unknown balance key (`with_overrides`), unsupported
+  state version (`UnsupportedStateVersionError`), and negative `ticks`
+  (`ValueError`). It never raises on player input.
 
 ## Save / restore
 
@@ -58,8 +82,9 @@ Backend must **not** recompute or mutate any of these values.
 
 ## Versioning
 
-- `GameState.version` (`STATE_VERSION`) tags the state schema. On a bump,
-  Backend migrates persisted snapshots; the simulation reads `version` on load.
+- `GameState.version` (`STATE_VERSION`, currently **2**) tags the state schema.
+  Loading a snapshot whose version differs raises `UnsupportedStateVersionError`
+  (with `expected`/`received`) — Backend must migrate rather than load blindly.
 - The public API should carry its own version prefix (Backend-owned, GD-010).
 
 ## Boundary reminders

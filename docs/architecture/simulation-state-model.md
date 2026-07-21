@@ -1,7 +1,9 @@
 # Simulation State Model
 
-- Version: v0.1.0
+- Version: v0.2.0
 - Status: Draft (for review/devcto)
+- `STATE_VERSION = 2` (v2 replaced the unbounded command ledger with a sequence
+  watermark + bounded recent-id window; older snapshots are rejected).
 
 ## GameState
 
@@ -17,12 +19,13 @@ state. Everything needed to resume a run is inside it.
 | `users` | int | active user base (traffic source) |
 | `load_balancers` | dict[str, LoadBalancer] | algorithm, sticky, rr_cursor |
 | `app_servers` | dict[str, AppServer] | cpu/mem/queue/health/version/weight/leak |
-| `caches` | dict[str, RedisCache] | hit_rate, ttl, capacity, stale groundwork |
+| `caches` | dict[str, RedisCache] | hit_rate, ttl, capacity, used_entries (eviction) |
 | `databases` | dict[str, Postgres] | pool, active/waiting conn, cpu |
-| `connections` | list[(src, dst)] | directed edges (the wiring) |
+| `connections` | list[(src, dst)] | directed edges: lb→app, app→cache, app→db, cache→db |
 | `incidents` | IncidentBook | active incidents + per-key cooldowns |
-| `events` | EventLog | bounded ring buffer of domain events |
-| `applied_command_ids` | list[str] | idempotency ledger |
+| `events` | EventLog | bounded ring buffer (+ transient step capture sink) |
+| `recent_command_ids` | list[str] | bounded recent-id window (size from config) |
+| `last_applied_command_sequence` | int | monotonic sequence watermark (idempotency) |
 | `economy` | Economy | cash, revenue, cost (cash may go negative) |
 | `user_trust` / `investor_trust` | float | 0..100 |
 | `tech_debt` / `ops_complexity` | float | growth hooks |
@@ -43,7 +46,29 @@ state. Everything needed to resume a run is inside it.
 - **Postgres** — single pool (MVP simplification): `max_connections`,
   `active_connections`, `waiting_connections`, `cpu_usage`, `query_queue`.
 - **Request / TickTraffic** — a sampled `Request` for tracing; bulk traffic is
-  aggregated in `TickTraffic` counters for performance.
+  aggregated in `TickTraffic` counters for performance (`completed`, `failed`,
+  `cache_evictions`, `timed_out`, ...).
+
+## Data-path resolution (D2)
+
+`GameState.resolve_data_path(app_id)` returns the `(cache, db)` an app actually
+reaches, following real connections with a visited-set cycle guard:
+
+1. app's directly connected cache;
+2. that cache's downstream DB (App → Redis → PostgreSQL);
+3. otherwise the app's directly connected DB;
+4. otherwise no DB → DB-required requests fail (`REQUEST_FAILED`,
+   `DATABASE_NOT_CONNECTED`). The engine never assumes a phantom SQLite.
+
+Unconnected caches/DBs receive zero demand and their CPU/connections/hit rate do
+not change.
+
+## Cache capacity & eviction (D4)
+
+Each tick a cache ages `used_entries` by `cache_retention_ratio`, then absorbs
+new writes. Overflow beyond `capacity_entries` is evicted (emits
+`CACHE_EVICTION`, `used_entries` never exceeds capacity) and eviction pressure
+lowers `hit_rate` — so a small cache genuinely differs from a large one.
 
 ## State transitions
 
@@ -65,8 +90,11 @@ state. Everything needed to resume a run is inside it.
   through JSON with `sort_keys=True` for stable output.
 - Enums serialize by value; connection tuples serialize as 2-element lists and
   restore as tuples; the RNG serializes as its integer state.
+- **Version check**: `from_dict` raises `UnsupportedStateVersionError(expected,
+  received)` when the version differs from `STATE_VERSION` (or is missing) — no
+  silent partial load (D6).
 - **Contract**: `serialize → deserialize → continue` is identical to an
-  uninterrupted run (verified).
+  uninterrupted run (verified), including the command sequence watermark.
 
 ## Seed & RNG
 
