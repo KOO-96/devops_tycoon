@@ -3,12 +3,12 @@
 > 이 문서는 DevOps Tycoon의 **모든 이벤트가 따라야 할 공통 템플릿과 규칙**을 정의합니다.
 > 개별 이벤트 데이터는 [mvp-event-catalog.md](./mvp-event-catalog.md)에 작성합니다.
 
-- 문서 버전: v0.1.0
+- 문서 버전: v0.2.0
 - 작성 브랜치: `plan/event`
-- 최종 수정일: 2026-07-20
+- 최종 수정일: 2026-07-21
 - 담당 역할: Event
-- 문서 상태: **Draft**
-- 참고한 Program 문서: `origin/plan/program:docs/game-design/devops-tycoon-master-plan.md` (commit `a28fd84`)
+- 문서 상태: **Approved**
+- 참고한 Program 문서: `docs/game-design/devops-tycoon-master-plan.md`, `docs/game-design/program-decisions.md`
 
 ---
 
@@ -174,3 +174,4 @@
 | 버전 | 날짜 | 변경 내용 | 작성자 | 승인 상태 |
 |------|------|-----------|--------|-----------|
 | v0.1.0 | 2026-07-20 | 이벤트 설계 표준 최초 작성 | Event | Draft |
+| v0.2.0 | 2026-07-21 | Program 승인 완료, DevCTO 검토 완료. Simulation Foundation 기준 문서로 승인. 상태 → Approved. | DevCTO | Approved |

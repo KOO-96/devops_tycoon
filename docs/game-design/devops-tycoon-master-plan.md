@@ -16,7 +16,7 @@
 | 작성 목적 | 기존 기획 자료·프로젝트 구조를 검토하여 개발팀이 구현 기준으로 사용할 통합 기획안을 제공한다. |
 | 최종 수정일 | 2026-07-20 |
 | 담당 역할 | Program (전체 기획) |
-| 문서 상태 | **Program Approved / DevCTO Review Pending** |
+| 문서 상태 | **Approved** |
 
 ### 저장소 현황 검토 결과 (작성 전 확인)
 
@@ -551,6 +551,7 @@ MVP에서 최소 2명의 CTO를 정의한다.
 | v0.1.0 | 2026-07-20 | 통합 기획안 최초 작성(4.1~4.19 전 항목). 그린필드 저장소 기준. `dev` 브랜치 신규 생성. | Program | Draft (검토 대기) |
 | v0.2.0 | 2026-07-20 | GD-001 게임 시간 구조 Confirmed(4.5 갱신), EVT-D-001~010 결정 반영, GD-004/GD-007 상태 갱신. plan/event 병합. [program-decisions.md](./program-decisions.md) 신설. | Program | Approved |
 | v0.2.0 (정합성) | 2026-07-20 | 문서 상태 Program Approved/DevCTO Review Pending, P3 Pause 정책 명확화, 4.17 역할 재정의(Program 추가, Ops=검토·테스트·CI·성능·보안, DevCTO=아키텍처·통합·최종승인, AI CTO 책임 3분할), 이벤트 카탈로그 GD-001 서술 갱신. | Program | Program Approved / DevCTO Review Pending |
+| v0.3.0 | 2026-07-21 | DevCTO 검토 결과 **APPROVED_WITH_TBD**(Blocking Issue 없음). 문서 상태 → **Approved**. BalanceConfig·플레이테스트 수치는 Proposed/TBD로 유지. 숨김·양방향 Unicode 검사 PASS. | DevCTO | Approved |
 
 ---
 
