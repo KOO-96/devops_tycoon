@@ -30,8 +30,19 @@ def _now() -> datetime:
     return datetime.now(UTC)
 
 
-def _payload_hash(payload: dict[str, Any]) -> str:
-    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+def _request_hash(command_type: str, payload: dict[str, Any]) -> str:
+    """Idempotency hash over command_type + canonical payload only.
+
+    Excludes expected_revision, request id, timestamps, and the backend-issued
+    sequence, so the same logical command retried with a new expected_revision
+    still hashes identically (HIGH-1). A different command_type with the same
+    payload hashes differently -> IDEMPOTENCY_CONFLICT.
+    """
+    canonical = json.dumps(
+        {"command_type": command_type, "payload": payload},
+        sort_keys=True,
+        separators=(",", ":"),
+    )
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
@@ -65,22 +76,27 @@ class CommandService:
         payload: dict[str, Any],
         expected_revision: int | None,
     ) -> dict[str, Any]:
-        payload_hash = _payload_hash(payload)
+        request_hash = _request_hash(command_type, payload)
         published: list[Any] = []
         async with self._uow_factory() as uow:
             session = await self._locked_session(uow, session_id)
-            self._check_revision(session, expected_revision)
 
+            # Idempotency is checked BEFORE the revision check (HIGH-1): a retry of
+            # a known command_id must return the stored result even if the caller's
+            # expected_revision is now stale.
             existing = await uow.commands.get_by_command_id(session_id, command_id)
             if existing is not None:
-                # Idempotent replay: return the stored result, do NOT re-run sim.
-                if existing.payload_hash != payload_hash:
+                if existing.payload_hash != request_hash:
                     raise ApiError(
                         ErrorCode.IDEMPOTENCY_CONFLICT,
-                        "command_id was already used with a different payload.",
+                        "command_id was already used with a different command/payload.",
                         details={"command_id": command_id},
                     )
+                # Return the ORIGINAL stored result (no re-run, no revision check).
                 return existing.result
+
+            # New command only: now enforce optimistic revision.
+            self._check_revision(session, expected_revision)
 
             sequence = session.next_command_sequence
             result = self._adapter.apply_command(
@@ -121,7 +137,7 @@ class CommandService:
                     command_id=command_id,
                     sequence=sequence,
                     command_type=command_type,
-                    payload_hash=payload_hash,
+                    payload_hash=request_hash,
                     status=status,
                     result=response,
                     created_at=_now(),
