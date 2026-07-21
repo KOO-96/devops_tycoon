@@ -50,6 +50,32 @@ def test_stale_revision_idempotent_retry_returns_stored_result(client: TestClien
     assert body["session_revision"] == first["session_revision"] == 1
 
 
+def test_same_command_id_across_sessions_is_independent(client: TestClient) -> None:
+    # HIGH-3: command_id is a per-session idempotency key; two sessions may reuse it.
+    a = _create(client)
+    b = _create(client)
+    p = {"target": "lb", "node_kind": "load_balancer"}
+    ra = _cmd(client, a, "shared", p)
+    rb = _cmd(client, b, "shared", p)
+    assert ra["status"] == rb["status"] == "APPLIED"
+    assert ra["session_revision"] == rb["session_revision"] == 1
+    # Per-session idempotent retry returns each session's own stored result.
+    ra2 = _cmd(client, a, "shared", p)
+    assert ra2["sequence"] == ra["sequence"]
+    # Different payload for the same command_id conflicts only within its session.
+    conflict = client.post(
+        f"/api/v1/game-sessions/{a}/commands",
+        json={
+            "command_id": "shared",
+            "command_type": "ADD_NODE",
+            "payload": {"target": "lb2", "node_kind": "load_balancer"},
+        },
+    )
+    assert conflict.status_code == 409
+    # Session B's "shared" record is unaffected.
+    assert client.get(f"/api/v1/game-sessions/{b}").json()["revision"] == 1
+
+
 def test_same_id_different_command_type_conflicts(client: TestClient) -> None:
     # Same command_id + same payload but different command_type -> IDEMPOTENCY_CONFLICT.
     sid = _create(client)

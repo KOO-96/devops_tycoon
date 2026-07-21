@@ -103,6 +103,76 @@ async def test_concurrent_distinct_commands_unique_sequences(
     assert summary["revision"] == 8
 
 
+async def test_same_command_id_across_sessions_independent(
+    harness: IntegrationHarness,
+) -> None:
+    # HIGH-3: command_id is unique only per session (surrogate UUID is the PK).
+    a = (await harness.sessions.create_session(seed=1))["session_id"]
+    b = (await harness.sessions.create_session(seed=2))["session_id"]
+    ra = await harness.commands.apply_command(
+        a, command_id="shared", command_type="ADD_NODE", payload=LB_PAYLOAD, expected_revision=0
+    )
+    rb = await harness.commands.apply_command(
+        b, command_id="shared", command_type="ADD_NODE", payload=LB_PAYLOAD, expected_revision=0
+    )
+    assert ra["status"] == rb["status"] == "APPLIED"
+    assert ra["session_revision"] == rb["session_revision"] == 1
+    assert ra["sequence"] == rb["sequence"] == 1
+    # Two rows exist (one per session), with distinct surrogate ids.
+    async with harness.factory() as uow:
+        rec_a = await uow.commands.get_by_command_id(a, "shared")
+        rec_b = await uow.commands.get_by_command_id(b, "shared")
+    assert rec_a is not None and rec_b is not None
+    assert rec_a.id != rec_b.id
+    assert rec_a.command_id == rec_b.command_id == "shared"
+
+
+async def test_cross_session_idempotency_isolation(harness: IntegrationHarness) -> None:
+    a = (await harness.sessions.create_session(seed=1))["session_id"]
+    b = (await harness.sessions.create_session(seed=2))["session_id"]
+    await harness.commands.apply_command(
+        a, command_id="k", command_type="ADD_NODE", payload=LB_PAYLOAD, expected_revision=0
+    )
+    await harness.commands.apply_command(
+        b, command_id="k", command_type="ADD_NODE", payload=LB_PAYLOAD, expected_revision=0
+    )
+    # Per-session retry returns each session's own result; different payload conflicts
+    # only within its own session.
+    a_retry = await harness.commands.apply_command(
+        a, command_id="k", command_type="ADD_NODE", payload=LB_PAYLOAD, expected_revision=0
+    )
+    assert a_retry["sequence"] == 1
+    with pytest.raises(ApiError) as exc:
+        await harness.commands.apply_command(
+            a,
+            command_id="k",
+            command_type="ADD_NODE",
+            payload={"target": "lb2", "node_kind": "load_balancer"},
+            expected_revision=0,
+        )
+    assert exc.value.code == ErrorCode.IDEMPOTENCY_CONFLICT
+    assert (await harness.sessions.get_summary(b))["revision"] == 1  # B unaffected
+
+
+async def test_concurrent_cross_session_same_command_id(harness: IntegrationHarness) -> None:
+    a = (await harness.sessions.create_session(seed=1))["session_id"]
+    b = (await harness.sessions.create_session(seed=2))["session_id"]
+
+    async def apply(sid: str) -> dict[str, Any]:
+        return await harness.commands.apply_command(
+            sid,
+            command_id="same",
+            command_type="ADD_NODE",
+            payload=LB_PAYLOAD,
+            expected_revision=None,
+        )
+
+    ra, rb = await asyncio.gather(apply(a), apply(b))
+    assert ra["status"] == rb["status"] == "APPLIED"
+    assert (await harness.sessions.get_summary(a))["revision"] == 1
+    assert (await harness.sessions.get_summary(b))["revision"] == 1
+
+
 async def test_rollback_on_commit_failure_leaves_no_partial_state(
     harness: IntegrationHarness, monkeypatch: pytest.MonkeyPatch
 ) -> None:
