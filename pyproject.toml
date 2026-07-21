@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "devops-tycoon-simulation"
+version = "0.1.0"
+description = "Deterministic MVP simulation foundation for DevOps Tycoon"
+requires-python = ">=3.9"
+# Runtime dependencies: NONE.
+# The simulation is a pure-stdlib domain module. It must not depend on
+# FastAPI, WebSocket servers, real Redis/PostgreSQL drivers, or LLM APIs.
+dependencies = []
+
+[project.optional-dependencies]
+# Dev tooling is NOT installed in this environment and is NOT a runtime dependency.
+# Proposed for DevCTO approval; until approved, tests run via stdlib `unittest`:
+#   python -m unittest discover -s tests
+dev = [
+    "pytest>=7",
+    "ruff>=0.4",
+    "mypy>=1.8",
+]
+
+[tool.setuptools.packages.find]
+include = ["simulation*"]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 100
+src = ["simulation", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.mypy]
+python_version = "3.9"
+strict = true
+files = ["simulation"]
+warn_unused_ignores = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
