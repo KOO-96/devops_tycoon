@@ -30,6 +30,41 @@ def test_same_id_same_payload_replays_stored_result(client: TestClient) -> None:
     assert first["session_revision"] == second["session_revision"] == 1
 
 
+def test_stale_revision_idempotent_retry_returns_stored_result(client: TestClient) -> None:
+    # HIGH-1: idempotency lookup must precede the revision check.
+    sid = _create(client)
+    p = {"target": "lb", "node_kind": "load_balancer"}
+    first = client.post(
+        f"/api/v1/game-sessions/{sid}/commands",
+        json={"command_id": "A", "command_type": "ADD_NODE", "payload": p, "expected_revision": 0},
+    ).json()
+    assert first["session_revision"] == 1
+    # Retry with the ORIGINAL (now stale) expected_revision -> stored result, not conflict.
+    retry = client.post(
+        f"/api/v1/game-sessions/{sid}/commands",
+        json={"command_id": "A", "command_type": "ADD_NODE", "payload": p, "expected_revision": 0},
+    )
+    assert retry.status_code == 200
+    body = retry.json()
+    assert body["sequence"] == first["sequence"]
+    assert body["session_revision"] == first["session_revision"] == 1
+
+
+def test_same_id_different_command_type_conflicts(client: TestClient) -> None:
+    # Same command_id + same payload but different command_type -> IDEMPOTENCY_CONFLICT.
+    sid = _create(client)
+    client.post(
+        f"/api/v1/game-sessions/{sid}/commands",
+        json={"command_id": "c1", "command_type": "PAUSE", "payload": {"paused": True}},
+    )
+    r = client.post(
+        f"/api/v1/game-sessions/{sid}/commands",
+        json={"command_id": "c1", "command_type": "SET_SPEED", "payload": {"paused": True}},
+    )
+    assert r.status_code == 409
+    assert r.json()["error"]["code"] == "IDEMPOTENCY_CONFLICT"
+
+
 def test_same_id_different_payload_conflicts(client: TestClient) -> None:
     sid = _create(client)
     _cmd(client, sid, "c1", {"target": "lb", "node_kind": "load_balancer"})
