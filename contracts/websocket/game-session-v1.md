@@ -53,19 +53,27 @@ All messages are JSON:
 ```
 
 - `event_id`: backend-assigned, unique — use for de-duplication.
-- `cursor`: monotonic per session — use as the next `after_cursor`.
+- `cursor`: **globally monotonic** BIGINT (increasing within a session but may
+  have gaps from other sessions' events — a gap is NOT a missing event). Use the
+  highest processed `cursor` as the next `after_cursor` (exclusive).
 - Simulation event data is preserved verbatim in `payload`; a missing `target`
   is `null` (never inferred). User-facing prose is produced by Frontend / a future
   CTO layer, not here.
 
-## Reconnect & de-duplication
+## Handshake, reconnect & de-duplication
 
+- On connect the server subscribes to live events **before** replaying from
+  PostgreSQL and runs a catch-up query, so an event committed during the
+  handshake is delivered exactly once (no gap, no duplicate).
 - Delivery is **at-least-once**. Reconnect with the highest processed `cursor` as
   `after_cursor`; the server replays only newer events.
 - De-duplicate by `event_id` (and/or ignore `cursor <= last_seen`).
 - PostgreSQL is the source of truth; the events REST endpoint
   (`GET /api/v1/game-sessions/{id}/events?after_cursor&limit`) returns the same
   ordering and identities for recovery.
+- A Redis outage during steady-state live mode may drop live messages for its
+  duration; recover by reconnecting (replay) or the events REST endpoint. Durable
+  events are never lost (PostgreSQL is the source of truth).
 
 ## Errors
 

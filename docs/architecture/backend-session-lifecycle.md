@@ -15,10 +15,12 @@ Order (one logical transaction; see command_service.py):
 1. open UnitOfWork
 2. `get_for_update(session)` — row lock (PostgreSQL `FOR UPDATE`; in-memory
    per-session lock held for the UoW)
-3. check `expected_revision` (if given) → `REVISION_CONFLICT` on mismatch
-4. look up existing `command_id`
-   - same `payload_hash` → return **stored result**, do NOT re-run simulation
-   - different `payload_hash` → `IDEMPOTENCY_CONFLICT`
+3. **look up existing `command_id` FIRST** (idempotency precedes the revision check):
+   - same request hash → return the **original stored result**, do NOT re-run
+     simulation, do NOT check revision (even if `expected_revision` is now stale)
+   - different request hash → `IDEMPOTENCY_CONFLICT`
+4. **only for a new command**: check `expected_revision` (if given) →
+   `REVISION_CONFLICT` on mismatch
 5. allocate `sequence = next_command_sequence` (backend-issued; clients never send it)
 6. adapter converts to a simulation `Command` and runs `step(..., ticks=0)`
 7. validate/serialize new snapshot (JSON-safe, NaN/Inf-free)
@@ -27,6 +29,12 @@ Order (one logical transaction; see command_service.py):
 10. persist command result + session + events
 11. **commit**
 12. **publish** envelopes to the broker (only after commit)
+
+> The request hash covers `command_type` + canonical `payload` only; it excludes
+> `expected_revision`, request id, timestamps, and the backend-issued `sequence`.
+> Thus the same logical command retried with a *new* `expected_revision` still
+> returns the stored result, while the same `command_id` with a different
+> `command_type` (or payload) is an `IDEMPOTENCY_CONFLICT` (HIGH-1 fix).
 
 A simulation-valid rejection (e.g. bad target) still consumes the sequence and
 is persisted with `status = COMMAND_REJECTED` and a `reason_code` (HTTP 200). An
