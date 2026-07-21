@@ -19,7 +19,26 @@
 | `config` | `BalanceConfig` (may be the default or an override set) |
 | `ticks` | how many ticks to process this call (0 = apply commands only) |
 
-`Command` fields: `id` (idempotency key), `type`, `target`, `payload`, `request_tick`.
+`Command` fields: `id` (idempotency key), `type`, `target`, `payload`, `request_tick`,
+`sequence` (Backend-assigned).
+
+### `ticks` input validation (Backend responsibility — SIM-FU-001)
+
+Backend MUST reject boolean values for `ticks` even though Python treats `bool`
+as a subtype of `int`. Public REST and WebSocket schemas must accept only a
+**strict non-negative integer within the configured batch limit**:
+
+- validate `ticks` as a strict integer (reject `bool`);
+- reject `ticks < 0` (Simulation also raises `ValueError`, but Backend rejects
+  earlier at the API boundary);
+- cap the maximum `ticks` per call via Backend configuration so an external
+  caller cannot request an unbounded batch;
+- large/long-running tick batches are Backend-internal or admin-only, never a
+  raw client input.
+
+Simulation currently rejects negative `ticks` (`ValueError`) and treats `0` as
+"apply commands only". Adding a `bool` guard inside Simulation is an optional
+follow-up; the authoritative input validation is Backend's.
 
 ## What Simulation returns OUT
 
@@ -62,6 +81,25 @@ Sequence policy (`Command.sequence >= 0`):
   recent window only — sequenced commands are authoritative.
 - The watermark and recent ledger survive save/restore.
 
+## Session concurrency (Backend responsibility — BACK-FU-002)
+
+Simulation does **not** guarantee safety for concurrent execution against the
+same `GameState`. Backend MUST serialize state transitions per game session:
+
+- serialize all command processing for a session (a session lock **or**
+  optimistic revision check on the state's tick / `STATE_VERSION`);
+- allocate `command_sequence` inside that same serialization boundary;
+- treat **command apply → simulation `step` → snapshot persist** as one logical
+  transaction; on conflict or persist failure, do **not** save a partially
+  applied state as a valid snapshot (`step` already returns a new state and never
+  mutates the input, so discarding the result on failure is safe);
+- handle REST retries and WebSocket re-sends via the Backend permanent
+  idempotency record (see above), not by re-running `step`.
+
+> Backend MUST serialize state transitions per game session. Command sequence
+> allocation, simulation execution, and snapshot persistence must occur under one
+> lock or optimistic revision boundary.
+
 ## Error handling
 
 - Validation failures do not raise; they emit `COMMAND_REJECTED` events with a
@@ -95,3 +133,21 @@ Sequence policy (`Command.sequence >= 0`):
 - CTO evidence separates `confirmed_facts` from `hypotheses` and lists
   `unavailable_information`; the AI CTO must not present hypotheses as confirmed
   (master-plan 4.12, P8).
+
+## Non-blocking follow-ups (NOT implemented in this Foundation)
+
+These are tracked items, not completed features. They do not block the MVP
+Simulation Foundation.
+
+| ID | Item | Owner | When |
+|----|------|-------|------|
+| SIM-FU-001 | Reject boolean/invalid `ticks` at external input | Backend | Backend API |
+| SIM-FU-002 | Document `cache_retention_ratio=1.0` thrashing boundary | Simulation | Balance tuning |
+| SIM-FU-003 | Stale Cache / Cache Stampede key-level lifecycle | Event + Simulation | Later sim PR |
+| SIM-FU-004 | Wire `trust_loss_cap_per_incident` once EVT-D-005 is Confirmed | Program + Simulation | After Program decision |
+| BACK-FU-001 | Permanent command idempotency store (unique constraint / table) | Backend | Backend foundation |
+| BACK-FU-002 | Per-session lock or optimistic revision | Backend | Backend foundation |
+| BACK-FU-003 | REST / WebSocket error schema mapping | Backend | API contract |
+| BACK-FU-004 | Snapshot cadence, migration, and transport (snapshot vs delta) policy | Backend | Storage layer |
+| BACK-FU-005 | Domain event dedup identifier (`event_id`/`sequence`) | Backend (+ optional Simulation) | WebSocket layer |
+| BACK-FU-006 | Event enrichment: `REQUEST_FAILED` node target; `CACHE_EVICTION` capacity/used/cause; TTL-vs-capacity distinction | Backend + Simulation | Contract extension |

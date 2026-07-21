@@ -31,7 +31,8 @@ The simulation computes the **facts** of the game and nothing else (master-plan 
 - **Simulation** — request flow, resource usage, incident conditions, technology
   effects, economy, and the **CTO evidence** data. Pure domain logic, no I/O.
 - **Backend** — API, WebSocket, persistence. Calls the simulation and stores/forwards
-  its output. Does not compute game rules.
+  its output. Does not compute game rules. **Owns input validation (incl. strict
+  `ticks`, reject bool) and per-session serialization** (see backend contract).
 - **Frontend** — renders state, sends player input. No game logic.
 - **AI CTO** — consumes CTO evidence; may not alter simulation facts (P8).
 
