@@ -34,9 +34,9 @@ class SessionRecord:
 
 @dataclass
 class CommandRecord:
-    id: str  # backend row id
+    id: str  # backend surrogate row id (UUID); global PK, NOT the command_id
     session_id: str
-    command_id: str
+    command_id: str  # client idempotency key, unique only within a session
     sequence: int
     command_type: str
     payload_hash: str

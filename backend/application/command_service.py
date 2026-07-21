@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import uuid
 from datetime import UTC, datetime
 from typing import Any
 
@@ -132,7 +133,10 @@ class CommandService:
 
             await uow.commands.add(
                 CommandRecord(
-                    id=command_id,
+                    # Surrogate PK: command_id is only unique per session
+                    # (UNIQUE(session_id, command_id)); it must NOT be the global PK
+                    # or two sessions sharing a command_id collide (HIGH-3).
+                    id=str(uuid.uuid4()),
                     session_id=session_id,
                     command_id=command_id,
                     sequence=sequence,
