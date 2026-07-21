@@ -8,9 +8,8 @@ An incident always passes through WARNING before ACTIVE, guaranteeing an
 observable warning sign precedes every failure (P7). One incident per
 (type, target) key prevents duplicate spam every tick.
 """
-from __future__ import annotations
 
-from typing import List
+from __future__ import annotations
 
 from simulation.config.models import BalanceConfig
 from simulation.events import DomainEvent, DomainEventType, EventLog
@@ -26,7 +25,7 @@ from simulation.incidents.rules import IncidentSignal
 
 def evaluate_incidents(
     book: IncidentBook,
-    signals: List[IncidentSignal],
+    signals: list[IncidentSignal],
     tick: int,
     config: BalanceConfig,
     events: EventLog,
@@ -69,8 +68,12 @@ def _maybe_open(
             tick=tick,
             type=DomainEventType.INCIDENT_OPENED,
             target=signal.target,
-            detail={"incident": signal.type.value, "phase": incident.phase.value,
-                    "metric": signal.metric, "event_id": incident.event_id},
+            detail={
+                "incident": signal.type.value,
+                "phase": incident.phase.value,
+                "metric": signal.metric,
+                "event_id": incident.event_id,
+            },
         )
     )
 
@@ -112,13 +115,17 @@ def _advance(
             tick=tick,
             type=DomainEventType.INCIDENT_PHASE_CHANGED,
             target=incident.target,
-            detail={"incident": incident.type.value, "from": old_phase.value,
-                    "to": new_phase.value, "metric": signal.metric},
+            detail={
+                "incident": incident.type.value,
+                "from": old_phase.value,
+                "to": new_phase.value,
+                "metric": signal.metric,
+            },
         )
     )
 
 
-def _next_phase(phase: IncidentPhase, signal: IncidentSignal):  # type: ignore[no-untyped-def]
+def _next_phase(phase: IncidentPhase, signal: IncidentSignal) -> IncidentPhase | None:
     """Return the next phase, or None when the incident should be removed."""
     if phase == IncidentPhase.WARNING:
         if signal.critical:

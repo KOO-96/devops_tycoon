@@ -4,10 +4,11 @@ master-plan leaves per-service vs single pool open; the MVP uses one pool
 (documented in simulation-state-model.md). Fields cover EVT-DB-001 (pool
 exhaustion) and EVT-DB-002 (DB CPU saturation / slow query groundwork).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict
+from typing import Any
 
 from simulation.nodes.base import Health, NodeKind
 
@@ -25,7 +26,7 @@ class Postgres:
 
     kind: NodeKind = NodeKind.POSTGRESQL
 
-    def to_dict(self) -> Dict[str, object]:
+    def to_dict(self) -> dict[str, object]:
         return {
             "kind": self.kind.value,
             "id": self.id,
@@ -39,16 +40,16 @@ class Postgres:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, object]) -> "Postgres":
+    def from_dict(cls, data: dict[str, Any]) -> Postgres:
         return cls(
             id=str(data["id"]),
             enabled=bool(data["enabled"]),
             health=Health(str(data["health"])),
-            cpu_usage=float(data["cpu_usage"]),  # type: ignore[arg-type]
-            max_connections=int(data["max_connections"]),  # type: ignore[arg-type]
-            active_connections=int(data["active_connections"]),  # type: ignore[arg-type]
-            waiting_connections=int(data["waiting_connections"]),  # type: ignore[arg-type]
-            query_queue=int(data["query_queue"]),  # type: ignore[arg-type]
+            cpu_usage=float(data["cpu_usage"]),
+            max_connections=int(data["max_connections"]),
+            active_connections=int(data["active_connections"]),
+            waiting_connections=int(data["waiting_connections"]),
+            query_queue=int(data["query_queue"]),
         )
 
     def connection_ratio(self) -> float:

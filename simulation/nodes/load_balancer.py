@@ -1,8 +1,9 @@
 """Load balancer node model."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict
+from typing import Any
 
 from simulation.nodes.base import LBAlgorithm, NodeKind
 
@@ -19,7 +20,7 @@ class LoadBalancer:
 
     kind: NodeKind = NodeKind.LOAD_BALANCER
 
-    def to_dict(self) -> Dict[str, object]:
+    def to_dict(self) -> dict[str, object]:
         return {
             "kind": self.kind.value,
             "id": self.id,
@@ -30,11 +31,11 @@ class LoadBalancer:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, object]) -> "LoadBalancer":
+    def from_dict(cls, data: dict[str, Any]) -> LoadBalancer:
         return cls(
             id=str(data["id"]),
             enabled=bool(data["enabled"]),
             algorithm=LBAlgorithm(str(data["algorithm"])),
             sticky=bool(data["sticky"]),
-            rr_cursor=int(data["rr_cursor"]),  # type: ignore[arg-type]
+            rr_cursor=int(data["rr_cursor"]),
         )

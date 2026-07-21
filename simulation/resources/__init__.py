@@ -3,6 +3,7 @@
 Each function is deterministic and side-effect free so it can be unit-tested in
 isolation; the engine orchestrates them per tick.
 """
+
 from __future__ import annotations
 
 from simulation.resources.connection_pool import allocate_connections

@@ -1,8 +1,9 @@
 """App server node model and resource state."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict
+from typing import Any
 
 from simulation.nodes.base import Health, NodeKind
 
@@ -28,7 +29,7 @@ class AppServer:
 
     kind: NodeKind = NodeKind.APP_SERVER
 
-    def to_dict(self) -> Dict[str, object]:
+    def to_dict(self) -> dict[str, object]:
         return {
             "kind": self.kind.value,
             "id": self.id,
@@ -46,20 +47,20 @@ class AppServer:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, object]) -> "AppServer":
+    def from_dict(cls, data: dict[str, Any]) -> AppServer:
         return cls(
             id=str(data["id"]),
             enabled=bool(data["enabled"]),
             health=Health(str(data["health"])),
             version=str(data["version"]),
-            weight=float(data["weight"]),  # type: ignore[arg-type]
-            cpu_usage=float(data["cpu_usage"]),  # type: ignore[arg-type]
-            mem_usage=float(data["mem_usage"]),  # type: ignore[arg-type]
-            queue_length=int(data["queue_length"]),  # type: ignore[arg-type]
-            queue_capacity=int(data["queue_capacity"]),  # type: ignore[arg-type]
-            last_request_rate=float(data["last_request_rate"]),  # type: ignore[arg-type]
-            mem_leak_per_tick=float(data["mem_leak_per_tick"]),  # type: ignore[arg-type]
-            mem_leak_accum=float(data.get("mem_leak_accum", 0.0)),  # type: ignore[arg-type]
+            weight=float(data["weight"]),
+            cpu_usage=float(data["cpu_usage"]),
+            mem_usage=float(data["mem_usage"]),
+            queue_length=int(data["queue_length"]),
+            queue_capacity=int(data["queue_capacity"]),
+            last_request_rate=float(data["last_request_rate"]),
+            mem_leak_per_tick=float(data["mem_leak_per_tick"]),
+            mem_leak_accum=float(data.get("mem_leak_accum", 0.0)),
         )
 
     def is_available(self) -> bool:

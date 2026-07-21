@@ -1,4 +1,5 @@
 """Incident state machine and evaluation."""
+
 from __future__ import annotations
 
 from simulation.incidents.evaluator import evaluate_incidents

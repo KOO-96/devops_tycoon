@@ -13,6 +13,7 @@ influences results; a run is defined purely by how many ticks are processed.
 Frontend converts ``tick`` into human-friendly game time; the canonical stored
 unit is always the tick.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass

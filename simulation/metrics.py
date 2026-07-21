@@ -3,10 +3,10 @@
 This is the observability surface Backend forwards and Frontend renders, and the
 factual basis for CTO evidence. It contains only *observable* facts.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List
 
 from simulation.requests.models import TickTraffic
 from simulation.state import GameState
@@ -16,14 +16,14 @@ from simulation.state import GameState
 class MetricSnapshot:
     tick: int
     users: int
-    traffic: Dict[str, int] = field(default_factory=dict)
-    app_servers: Dict[str, Dict[str, object]] = field(default_factory=dict)
-    databases: Dict[str, Dict[str, object]] = field(default_factory=dict)
-    caches: Dict[str, Dict[str, object]] = field(default_factory=dict)
-    active_incidents: List[Dict[str, object]] = field(default_factory=list)
+    traffic: dict[str, int] = field(default_factory=dict)
+    app_servers: dict[str, dict[str, object]] = field(default_factory=dict)
+    databases: dict[str, dict[str, object]] = field(default_factory=dict)
+    caches: dict[str, dict[str, object]] = field(default_factory=dict)
+    active_incidents: list[dict[str, object]] = field(default_factory=list)
     cash: float = 0.0
 
-    def to_dict(self) -> Dict[str, object]:
+    def to_dict(self) -> dict[str, object]:
         return {
             "tick": self.tick,
             "users": self.users,
@@ -44,9 +44,11 @@ def build_snapshot(state: GameState, traffic: TickTraffic) -> MetricSnapshot:
         "dropped_no_server": traffic.dropped_no_server,
         "cache_hits": traffic.cache_hits,
         "cache_misses": traffic.cache_misses,
+        "cache_evictions": traffic.cache_evictions,
         "db_queries": traffic.db_queries,
         "completed": traffic.completed,
         "timed_out": traffic.timed_out,
+        "failed": traffic.failed,
         "retried": traffic.retried,
     }
     for sid, server in state.app_servers.items():

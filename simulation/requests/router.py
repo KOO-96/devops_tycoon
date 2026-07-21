@@ -5,25 +5,24 @@ it always produces the same split. This is where EVT-LB-001 (traffic imbalance)
 is reproduced: round-robin yields an even split, while skewed weights (or a
 sticky config) concentrate traffic on a subset of servers.
 """
-from __future__ import annotations
 
-from typing import Dict, List, Tuple
+from __future__ import annotations
 
 from simulation.nodes.app_server import AppServer
 from simulation.nodes.base import LBAlgorithm
 from simulation.nodes.load_balancer import LoadBalancer
 
 
-def available_targets(servers: List[AppServer]) -> List[AppServer]:
+def available_targets(servers: list[AppServer]) -> list[AppServer]:
     """Only enabled, non-Down servers receive traffic (deterministic order)."""
     return [s for s in servers if s.is_available()]
 
 
 def distribute(
     lb: LoadBalancer,
-    servers: List[AppServer],
+    servers: list[AppServer],
     total: int,
-) -> Tuple[Dict[str, int], int]:
+) -> tuple[dict[str, int], int]:
     """Split ``total`` requests across available servers.
 
     Returns ``(per_server_counts, new_rr_cursor)``. Servers not selected still
@@ -43,7 +42,7 @@ def distribute(
     return (_weighted(targets, total, sticky=lb.sticky), lb.rr_cursor)
 
 
-def _round_robin(targets: List[AppServer], total: int, cursor: int) -> Tuple[Dict[str, int], int]:
+def _round_robin(targets: list[AppServer], total: int, cursor: int) -> tuple[dict[str, int], int]:
     counts = {s.id: 0 for s in targets}
     n = len(targets)
     start = cursor % n
@@ -52,7 +51,7 @@ def _round_robin(targets: List[AppServer], total: int, cursor: int) -> Tuple[Dic
     return counts, (start + total) % n
 
 
-def _least_conn(targets: List[AppServer], total: int) -> Dict[str, int]:
+def _least_conn(targets: list[AppServer], total: int) -> dict[str, int]:
     counts = {s.id: 0 for s in targets}
     # Effective load = existing queue + already-assigned this tick.
     load = {s.id: s.queue_length for s in targets}
@@ -65,7 +64,7 @@ def _least_conn(targets: List[AppServer], total: int) -> Dict[str, int]:
     return counts
 
 
-def _weighted(targets: List[AppServer], total: int, sticky: bool) -> Dict[str, int]:
+def _weighted(targets: list[AppServer], total: int, sticky: bool) -> dict[str, int]:
     counts = {s.id: 0 for s in targets}
     weights = {s.id: max(0.0, s.weight) for s in targets}
     if sticky:
@@ -89,7 +88,7 @@ def _weighted(targets: List[AppServer], total: int, sticky: bool) -> Dict[str, i
     return {sid: floors[sid] for sid in counts}
 
 
-def imbalance_metric(per_server: Dict[str, int]) -> float:
+def imbalance_metric(per_server: dict[str, int]) -> float:
     """Max-minus-min share across servers (0.0 = perfectly even)."""
     if not per_server:
         return 0.0

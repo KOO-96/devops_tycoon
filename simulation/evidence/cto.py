@@ -6,10 +6,10 @@ never asserts an unobserved root cause as certain. Candidate causes/actions are
 drawn from the approved technology-trigger-matrix and always flagged as
 hypotheses, never as confirmed truth.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List
 
 from simulation.incidents.models import IncidentType
 from simulation.metrics import MetricSnapshot
@@ -17,7 +17,7 @@ from simulation.state import GameState
 
 # Candidate causes and actions per incident type, sourced from
 # events/technology-trigger-matrix.md. These are HYPOTHESES, not confirmed facts.
-_HYPOTHESES: Dict[IncidentType, List[str]] = {
+_HYPOTHESES: dict[IncidentType, list[str]] = {
     IncidentType.LB_IMBALANCE: [
         "LB algorithm/weights skewed",
         "sticky sessions concentrating traffic",
@@ -54,9 +54,12 @@ _HYPOTHESES: Dict[IncidentType, List[str]] = {
     ],
 }
 
-_ACTIONS: Dict[IncidentType, List[Dict[str, str]]] = {
+_ACTIONS: dict[IncidentType, list[dict[str, str]]] = {
     IncidentType.LB_IMBALANCE: [
-        {"action": "change LB algorithm to round-robin/least-conn", "risk": "brief redistribution latency"},
+        {
+            "action": "change LB algorithm to round-robin/least-conn",
+            "risk": "brief redistribution latency",
+        },
         {"action": "disable sticky sessions", "risk": "session-affinity features affected"},
         {"action": "add a server", "risk": "cost up; does not fix misconfiguration"},
     ],
@@ -96,14 +99,14 @@ _ACTIONS: Dict[IncidentType, List[Dict[str, str]]] = {
 @dataclass
 class CTOEvidence:
     tick: int
-    observable_metrics: Dict[str, object] = field(default_factory=dict)
-    active_alerts: List[Dict[str, object]] = field(default_factory=list)
-    confirmed_facts: List[str] = field(default_factory=list)
-    hypotheses: List[str] = field(default_factory=list)
-    unavailable_information: List[str] = field(default_factory=list)
-    possible_actions: List[Dict[str, str]] = field(default_factory=list)
+    observable_metrics: dict[str, object] = field(default_factory=dict)
+    active_alerts: list[dict[str, object]] = field(default_factory=list)
+    confirmed_facts: list[str] = field(default_factory=list)
+    hypotheses: list[str] = field(default_factory=list)
+    unavailable_information: list[str] = field(default_factory=list)
+    possible_actions: list[dict[str, str]] = field(default_factory=list)
 
-    def to_dict(self) -> Dict[str, object]:
+    def to_dict(self) -> dict[str, object]:
         return {
             "tick": self.tick,
             "observable_metrics": self.observable_metrics,

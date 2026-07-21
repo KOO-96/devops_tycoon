@@ -1,4 +1,5 @@
 """Infrastructure node models (the game board pieces)."""
+
 from __future__ import annotations
 
 from simulation.nodes.app_server import AppServer

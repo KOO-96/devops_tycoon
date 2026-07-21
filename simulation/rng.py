@@ -9,6 +9,7 @@ Why a custom PRNG instead of :mod:`random`:
 The generator is a textbook SplitMix64: fast, well-distributed, and fully
 reproducible from its 64-bit state.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -26,7 +27,7 @@ class Rng:
     state: int
 
     @classmethod
-    def from_seed(cls, seed: int) -> "Rng":
+    def from_seed(cls, seed: int) -> Rng:
         return cls(state=seed & _MASK64)
 
     def _next_u64(self) -> int:
@@ -60,5 +61,5 @@ class Rng:
         return self.state
 
     @classmethod
-    def from_state(cls, state: int) -> "Rng":
+    def from_state(cls, state: int) -> Rng:
         return cls(state=state & _MASK64)

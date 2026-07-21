@@ -5,14 +5,15 @@ performance (sim prompt §12, §25). A small bounded set of representative
 ``Request`` objects is kept for visualization/tracing; the bulk of traffic is
 aggregated, never stored as unbounded per-request objects.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
-from typing import Dict, Optional
+from enum import StrEnum
+from typing import Any
 
 
-class RequestState(str, Enum):
+class RequestState(StrEnum):
     CREATED = "CREATED"
     QUEUED = "QUEUED"
     PROCESSING = "PROCESSING"
@@ -41,7 +42,7 @@ class Request:
     business_value: float = 0.01
     state: RequestState = RequestState.CREATED
 
-    def to_dict(self) -> Dict[str, object]:
+    def to_dict(self) -> dict[str, object]:
         return {
             "id": self.id,
             "request_type": self.request_type,
@@ -57,18 +58,18 @@ class Request:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, object]) -> "Request":
+    def from_dict(cls, data: dict[str, Any]) -> Request:
         return cls(
             id=str(data["id"]),
             request_type=str(data["request_type"]),
-            created_tick=int(data["created_tick"]),  # type: ignore[arg-type]
+            created_tick=int(data["created_tick"]),
             location=str(data["location"]),
             cacheable=bool(data["cacheable"]),
             db_required=bool(data["db_required"]),
-            timeout_tick=int(data["timeout_tick"]),  # type: ignore[arg-type]
-            retry_count=int(data["retry_count"]),  # type: ignore[arg-type]
-            max_retry=int(data["max_retry"]),  # type: ignore[arg-type]
-            business_value=float(data["business_value"]),  # type: ignore[arg-type]
+            timeout_tick=int(data["timeout_tick"]),
+            retry_count=int(data["retry_count"]),
+            max_retry=int(data["max_retry"]),
+            business_value=float(data["business_value"]),
             state=RequestState(str(data["state"])),
         )
 
@@ -82,11 +83,13 @@ class TickTraffic:
     dropped_no_server: int = 0
     cache_hits: int = 0
     cache_misses: int = 0
+    cache_evictions: int = 0
     db_queries: int = 0
     completed: int = 0
     timed_out: int = 0
+    failed: int = 0
     retried: int = 0
-    per_server_routed: Optional[Dict[str, int]] = None
+    per_server_routed: dict[str, int] | None = None
 
     def __post_init__(self) -> None:
         if self.per_server_routed is None:

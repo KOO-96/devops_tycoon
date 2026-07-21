@@ -4,6 +4,7 @@ Effective memory = persistent leak base + transient pressure from the queue.
 A non-zero ``leak_base`` that grows every tick reproduces EVT-APP-002 (a slow,
 monotonic climb that a restart resets).
 """
+
 from __future__ import annotations
 
 from simulation.nodes.base import clamp

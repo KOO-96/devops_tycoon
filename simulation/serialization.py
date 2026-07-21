@@ -4,6 +4,7 @@ The pure game state round-trips through JSON so Backend can persist and restore
 it. Restoring and continuing must yield identical results to never having
 stopped (sim prompt §9, §23).
 """
+
 from __future__ import annotations
 
 import json

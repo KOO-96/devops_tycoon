@@ -1,4 +1,5 @@
 """CPU usage math."""
+
 from __future__ import annotations
 
 from simulation.nodes.base import clamp

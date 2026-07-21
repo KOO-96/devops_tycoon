@@ -4,9 +4,8 @@ Traffic is an aggregate count derived from the user base, not a swarm of
 per-request objects (sim prompt §25). A small bounded set of sample ``Request``
 objects is produced for visualization/tracing.
 """
-from __future__ import annotations
 
-from typing import List
+from __future__ import annotations
 
 from simulation.config.models import BalanceConfig
 from simulation.requests.models import Request, RequestState
@@ -25,9 +24,9 @@ def make_sample_requests(
     next_id: int,
     count: int,
     config: BalanceConfig,
-) -> List[Request]:
+) -> list[Request]:
     """Build up to a few representative requests for tracing (deterministic)."""
-    samples: List[Request] = []
+    samples: list[Request] = []
     if count <= 0:
         return samples
     cacheable_ratio = config.get("cacheable_ratio")

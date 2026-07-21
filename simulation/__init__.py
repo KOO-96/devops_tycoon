@@ -15,6 +15,7 @@ Determinism contract (program-decisions.md GD-001, master-plan 4.11):
 
 The single public entry point is :func:`simulation.engine.step`.
 """
+
 from __future__ import annotations
 
 from simulation.engine import SimulationResult, step

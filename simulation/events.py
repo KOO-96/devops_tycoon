@@ -5,19 +5,21 @@ momentary facts (a request completed, a pool was exhausted this tick), while an
 incident is a persistent condition with a lifecycle. Events are capped in a ring
 buffer so long runs never accumulate unbounded memory (sim prompt §25).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import Dict, List, Optional
+from enum import StrEnum
+from typing import Any
 
 
-class DomainEventType(str, Enum):
+class DomainEventType(StrEnum):
     REQUEST_CREATED = "REQUEST_CREATED"
     REQUEST_ROUTED = "REQUEST_ROUTED"
     REQUEST_COMPLETED = "REQUEST_COMPLETED"
     REQUEST_TIMEOUT = "REQUEST_TIMEOUT"
     REQUEST_DROPPED = "REQUEST_DROPPED"
+    REQUEST_FAILED = "REQUEST_FAILED"
     CACHE_HIT = "CACHE_HIT"
     CACHE_MISS = "CACHE_MISS"
     CACHE_WRITE = "CACHE_WRITE"
@@ -39,13 +41,9 @@ class DomainEvent:
     tick: int
     type: DomainEventType
     target: str = ""
-    detail: Optional[Dict[str, object]] = None
+    detail: dict[str, object] = field(default_factory=dict)
 
-    def __post_init__(self) -> None:
-        if self.detail is None:
-            self.detail = {}
-
-    def to_dict(self) -> Dict[str, object]:
+    def to_dict(self) -> dict[str, object]:
         return {
             "tick": self.tick,
             "type": self.type.value,
@@ -54,41 +52,57 @@ class DomainEvent:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, object]) -> "DomainEvent":
+    def from_dict(cls, data: dict[str, Any]) -> DomainEvent:
         detail = data.get("detail") or {}
         return cls(
-            tick=int(data["tick"]),  # type: ignore[arg-type]
+            tick=int(data["tick"]),
             type=DomainEventType(str(data["type"])),
             target=str(data.get("target", "")),
-            detail=dict(detail),  # type: ignore[arg-type]
+            detail=dict(detail),
         )
 
 
 @dataclass
 class EventLog:
-    """A bounded FIFO of the most recent domain events."""
+    """A bounded FIFO of the most recent domain events.
+
+    Long-term storage (``items``) is a ring buffer capped at ``max_size``. A
+    transient per-step *capture sink* separately collects everything emitted
+    during a step, so the caller never relies on list indices to detect new
+    events even after old ones are trimmed (D1 fix).
+    """
 
     max_size: int = 500
-    items: List[DomainEvent] = field(default_factory=list)
+    items: list[DomainEvent] = field(default_factory=list)
+    # Transient, not serialized: receives events emitted during the current step.
+    _sink: list[DomainEvent] | None = field(default=None, repr=False, compare=False)
 
     def emit(self, event: DomainEvent) -> None:
         self.items.append(event)
         overflow = len(self.items) - self.max_size
         if overflow > 0:
             del self.items[:overflow]
+        if self._sink is not None:
+            self._sink.append(event)
 
-    def recent(self, count: int) -> List[DomainEvent]:
+    def begin_capture(self, sink: list[DomainEvent]) -> None:
+        self._sink = sink
+
+    def end_capture(self) -> None:
+        self._sink = None
+
+    def recent(self, count: int) -> list[DomainEvent]:
         if count <= 0:
             return []
         return list(self.items[-count:])
 
-    def to_dict(self) -> Dict[str, object]:
+    def to_dict(self) -> dict[str, object]:
         return {"max_size": self.max_size, "items": [e.to_dict() for e in self.items]}
 
     @classmethod
-    def from_dict(cls, data: Dict[str, object]) -> "EventLog":
+    def from_dict(cls, data: dict[str, Any]) -> EventLog:
         items_raw = data.get("items") or []
         return cls(
-            max_size=int(data.get("max_size", 500)),  # type: ignore[arg-type]
-            items=[DomainEvent.from_dict(d) for d in items_raw],  # type: ignore[arg-type]
+            max_size=int(data.get("max_size", 500)),
+            items=[DomainEvent.from_dict(d) for d in items_raw],
         )

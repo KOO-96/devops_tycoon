@@ -1,4 +1,5 @@
 """Per-tick economy: revenue from completed requests, cost from running nodes."""
+
 from __future__ import annotations
 
 from simulation.config.models import BalanceConfig

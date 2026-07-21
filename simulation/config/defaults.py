@@ -8,6 +8,7 @@ IMPORTANT: absolute time/threshold numbers are **Proposed** (playtest-tunable),
 except where Program has Confirmed them (e.g. DB Connection Warning 80%, and the
 *structure* of GD-001). Do not treat Proposed numbers as final.
 """
+
 from __future__ import annotations
 
 from simulation.config.models import BalanceConfig, BalanceValue, ValueStatus
@@ -19,7 +20,7 @@ _C = ValueStatus.CONFIRMED
 _P = ValueStatus.PROPOSED
 
 
-def _defaults() -> "dict[str, BalanceValue]":
+def _defaults() -> dict[str, BalanceValue]:
     v = BalanceValue
     return {
         # --- Time (GD-001: structure Confirmed, numbers Proposed) ---
@@ -42,24 +43,52 @@ def _defaults() -> "dict[str, BalanceValue]":
         # RNG draw). When > 0 the RNG is consumed, so different seeds diverge.
         "traffic_jitter": v(0, "count", _P, _CAT),
         # --- App server (EVT-APP-001/002) ---
-        "app_cpu_warning": v(0.70, "ratio", _P, _CAT, operator=">=", related_event_id="EVT-APP-001"),
-        "app_cpu_critical": v(0.90, "ratio", _P, _CAT, operator=">=", related_event_id="EVT-APP-001"),
-        "app_cpu_recover": v(0.60, "ratio", _P, _CAT, operator="<=", related_event_id="EVT-APP-001"),
-        "app_mem_warning": v(0.75, "ratio", _P, _CAT, operator=">=", related_event_id="EVT-APP-002"),
-        "app_mem_critical": v(0.90, "ratio", _P, _CAT, operator=">=", related_event_id="EVT-APP-002"),
-        "app_mem_recover": v(0.70, "ratio", _P, _CAT, operator="<=", related_event_id="EVT-APP-002"),
+        "app_cpu_warning": v(
+            0.70, "ratio", _P, _CAT, operator=">=", related_event_id="EVT-APP-001"
+        ),
+        "app_cpu_critical": v(
+            0.90, "ratio", _P, _CAT, operator=">=", related_event_id="EVT-APP-001"
+        ),
+        "app_cpu_recover": v(
+            0.60, "ratio", _P, _CAT, operator="<=", related_event_id="EVT-APP-001"
+        ),
+        "app_mem_warning": v(
+            0.75, "ratio", _P, _CAT, operator=">=", related_event_id="EVT-APP-002"
+        ),
+        "app_mem_critical": v(
+            0.90, "ratio", _P, _CAT, operator=">=", related_event_id="EVT-APP-002"
+        ),
+        "app_mem_recover": v(
+            0.70, "ratio", _P, _CAT, operator="<=", related_event_id="EVT-APP-002"
+        ),
         "app_queue_drain_per_tick": v(20, "req/tick", _P, _CAT),
         # --- Load balancer (EVT-LB-001) ---
-        "lb_imbalance_warning": v(0.20, "ratio_pp", _P, _CAT, operator=">=", related_event_id="EVT-LB-001"),
-        "lb_imbalance_trigger": v(0.40, "ratio_pp", _P, _CAT, operator=">=", related_event_id="EVT-LB-001"),
-        "lb_imbalance_recover": v(0.15, "ratio_pp", _P, _CAT, operator="<=", related_event_id="EVT-LB-001"),
+        "lb_imbalance_warning": v(
+            0.20, "ratio_pp", _P, _CAT, operator=">=", related_event_id="EVT-LB-001"
+        ),
+        "lb_imbalance_trigger": v(
+            0.40, "ratio_pp", _P, _CAT, operator=">=", related_event_id="EVT-LB-001"
+        ),
+        "lb_imbalance_recover": v(
+            0.15, "ratio_pp", _P, _CAT, operator="<=", related_event_id="EVT-LB-001"
+        ),
         # --- Redis (EVT-CACHE-001) ---
-        "cache_hit_trigger": v(0.70, "ratio", _P, _CAT, operator="<=", related_event_id="EVT-CACHE-001"),
-        "cache_hit_target": v(0.90, "ratio", _P, _CAT, operator=">=", related_event_id="EVT-CACHE-001"),
+        "cache_hit_trigger": v(
+            0.70, "ratio", _P, _CAT, operator="<=", related_event_id="EVT-CACHE-001"
+        ),
+        "cache_hit_target": v(
+            0.90, "ratio", _P, _CAT, operator=">=", related_event_id="EVT-CACHE-001"
+        ),
         "cache_base_hit_rate": v(0.85, "ratio", _P, _CAT),
+        # Capacity eviction: hit rate degrades with eviction pressure (EVT-CACHE-001).
+        "cache_eviction_hit_penalty": v(1.0, "ratio", _P, _CAT, related_event_id="EVT-CACHE-001"),
+        # Fraction of used entries retained per tick before new writes (aging).
+        "cache_retention_ratio": v(0.5, "ratio", _P, _CAT),
         # --- PostgreSQL connection pool (EVT-DB-001) ---
         "db_conn_warning": v(0.80, "ratio", _C, _PD, operator=">=", related_event_id="EVT-DB-001"),
-        "db_conn_critical": v(0.95, "ratio", _P, _CAT, operator=">=", related_event_id="EVT-DB-001"),
+        "db_conn_critical": v(
+            0.95, "ratio", _P, _CAT, operator=">=", related_event_id="EVT-DB-001"
+        ),
         "db_conn_recover": v(0.70, "ratio", _P, _CAT, operator="<=", related_event_id="EVT-DB-001"),
         "db_cpu_per_active_conn": v(0.03, "cpu_fraction", _P, _CAT),
         "db_cpu_warning": v(0.70, "ratio", _P, _CAT, operator=">=", related_event_id="EVT-DB-002"),
@@ -68,14 +97,23 @@ def _defaults() -> "dict[str, BalanceValue]":
         "db_query_ticks": v(1, "tick", _P, _CAT),
         # --- Timeout / retry (EVT-DEP/DB, master-plan 4.11) ---
         "request_timeout_ticks": v(30, "tick", _P, _CAT, related_event_id="EVT-DB-001"),
-        "timeout_warn_rate": v(0.05, "ratio", _P, _CAT, operator=">=", related_event_id="EVT-DB-001"),
-        "timeout_critical_rate": v(0.15, "ratio", _P, _CAT, operator=">=", related_event_id="EVT-DB-001"),
-        "timeout_clear_rate": v(0.01, "ratio", _P, _CAT, operator="<=", related_event_id="EVT-DB-001"),
+        "timeout_warn_rate": v(
+            0.05, "ratio", _P, _CAT, operator=">=", related_event_id="EVT-DB-001"
+        ),
+        "timeout_critical_rate": v(
+            0.15, "ratio", _P, _CAT, operator=">=", related_event_id="EVT-DB-001"
+        ),
+        "timeout_clear_rate": v(
+            0.01, "ratio", _P, _CAT, operator="<=", related_event_id="EVT-DB-001"
+        ),
         "max_retry": v(2, "count", _P, _CAT),
         "retry_backoff_ticks": v(5, "tick", _P, _CAT),
         # Bounds retried requests re-entering the system, preventing retry storms.
         "retry_fraction": v(0.5, "ratio", _P, _CAT),
         "retry_ceiling": v(500, "count", _P, _CAT),
+        # Bounded recent-command ledger (Backend owns permanent idempotency;
+        # Simulation keeps a watermark + recent window). EVT-D-010 / GD-010.
+        "command_ledger_size": v(256, "count", _P, _PD, related_event_id="GD-010"),
         # --- Economy ---
         "revenue_per_completed_request": v(0.01, "cash", _P, _CAT),
         "app_server_cost_per_tick": v(0.5, "cash/tick", _P, _CAT),

@@ -3,11 +3,12 @@
 Topologies are otherwise built by issuing player commands (ADD_NODE / CONNECT),
 which is how Backend will drive the simulation.
 """
+
 from __future__ import annotations
 
 from simulation.clock import Clock
-from simulation.config.models import BalanceConfig
 from simulation.config.defaults import default_balance_config
+from simulation.config.models import BalanceConfig
 from simulation.rng import Rng
 from simulation.state import GameState
 

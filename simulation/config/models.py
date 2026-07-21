@@ -7,14 +7,15 @@ Each tunable value carries metadata (sim prompt §21):
 initial value, playtest-tunable) and TBD (needs a prior decision). Nothing in
 the engine may hardcode a number that belongs here.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import Dict
+from enum import StrEnum
+from typing import Any
 
 
-class ValueStatus(str, Enum):
+class ValueStatus(StrEnum):
     CONFIRMED = "Confirmed"
     PROPOSED = "Proposed"
     TBD = "TBD"
@@ -32,7 +33,7 @@ class BalanceValue:
     duration_ticks: int = 0
     related_event_id: str = ""
 
-    def to_dict(self) -> Dict[str, object]:
+    def to_dict(self) -> dict[str, object]:
         return {
             "value": self.value,
             "unit": self.unit,
@@ -44,14 +45,14 @@ class BalanceValue:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, object]) -> "BalanceValue":
+    def from_dict(cls, data: dict[str, Any]) -> BalanceValue:
         return cls(
-            value=float(data["value"]),  # type: ignore[arg-type]
+            value=float(data["value"]),
             unit=str(data["unit"]),
             status=ValueStatus(str(data["status"])),
             source=str(data["source"]),
             operator=str(data.get("operator", "")),
-            duration_ticks=int(data.get("duration_ticks", 0)),  # type: ignore[arg-type]
+            duration_ticks=int(data.get("duration_ticks", 0)),
             related_event_id=str(data.get("related_event_id", "")),
         )
 
@@ -60,7 +61,7 @@ class BalanceValue:
 class BalanceConfig:
     """A named collection of balance values with typed accessors."""
 
-    values: Dict[str, BalanceValue] = field(default_factory=dict)
+    values: dict[str, BalanceValue] = field(default_factory=dict)
 
     def get(self, key: str) -> float:
         """Return the numeric value for ``key`` (raises if missing)."""
@@ -72,13 +73,13 @@ class BalanceConfig:
     def meta(self, key: str) -> BalanceValue:
         return self.values[key]
 
-    def with_overrides(self, overrides: Dict[str, float]) -> "BalanceConfig":
+    def with_overrides(self, overrides: dict[str, float]) -> BalanceConfig:
         """Return a copy with numeric overrides applied (metadata preserved).
 
         Used by tests/playtests to tune values without mutating the shared
         default config. Overriding an unknown key is an explicit error.
         """
-        new_values: Dict[str, BalanceValue] = dict(self.values)
+        new_values: dict[str, BalanceValue] = dict(self.values)
         for key, value in overrides.items():
             if key not in new_values:
                 raise KeyError(f"unknown balance key: {key}")
@@ -94,9 +95,9 @@ class BalanceConfig:
             )
         return BalanceConfig(values=new_values)
 
-    def to_dict(self) -> Dict[str, Dict[str, object]]:
+    def to_dict(self) -> dict[str, dict[str, object]]:
         return {key: bv.to_dict() for key, bv in self.values.items()}
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Dict[str, object]]) -> "BalanceConfig":
+    def from_dict(cls, data: dict[str, dict[str, object]]) -> BalanceConfig:
         return cls(values={key: BalanceValue.from_dict(bv) for key, bv in data.items()})

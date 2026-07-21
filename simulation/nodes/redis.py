@@ -4,10 +4,11 @@ Stale-cache groundwork (EVT-CACHE-003) is represented via ``cached_version`` /
 ``source_version`` / ``expire_tick`` fields so the model is ready without
 committing to an invalidation policy that Event has not confirmed.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict
+from typing import Any
 
 from simulation.nodes.base import Health, NodeKind
 
@@ -29,7 +30,7 @@ class RedisCache:
 
     kind: NodeKind = NodeKind.REDIS
 
-    def to_dict(self) -> Dict[str, object]:
+    def to_dict(self) -> dict[str, object]:
         return {
             "kind": self.kind.value,
             "id": self.id,
@@ -45,18 +46,18 @@ class RedisCache:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, object]) -> "RedisCache":
+    def from_dict(cls, data: dict[str, Any]) -> RedisCache:
         return cls(
             id=str(data["id"]),
             enabled=bool(data["enabled"]),
             health=Health(str(data["health"])),
-            capacity_entries=int(data["capacity_entries"]),  # type: ignore[arg-type]
-            used_entries=int(data["used_entries"]),  # type: ignore[arg-type]
-            ttl_ticks=int(data["ttl_ticks"]),  # type: ignore[arg-type]
-            hit_rate=float(data["hit_rate"]),  # type: ignore[arg-type]
-            cached_version=int(data["cached_version"]),  # type: ignore[arg-type]
-            source_version=int(data["source_version"]),  # type: ignore[arg-type]
-            expire_tick=int(data["expire_tick"]),  # type: ignore[arg-type]
+            capacity_entries=int(data["capacity_entries"]),
+            used_entries=int(data["used_entries"]),
+            ttl_ticks=int(data["ttl_ticks"]),
+            hit_rate=float(data["hit_rate"]),
+            cached_version=int(data["cached_version"]),
+            source_version=int(data["source_version"]),
+            expire_tick=int(data["expire_tick"]),
         )
 
     def is_available(self) -> bool:

@@ -3,26 +3,27 @@
 Node health uses the four-level scale from master-plan 4.9:
 ``Healthy / Warning / Critical / Down``.
 """
+
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 
-class NodeKind(str, Enum):
+class NodeKind(StrEnum):
     LOAD_BALANCER = "load_balancer"
     APP_SERVER = "app_server"
     REDIS = "redis"
     POSTGRESQL = "postgresql"
 
 
-class Health(str, Enum):
+class Health(StrEnum):
     HEALTHY = "Healthy"
     WARNING = "Warning"
     CRITICAL = "Critical"
     DOWN = "Down"
 
 
-class LBAlgorithm(str, Enum):
+class LBAlgorithm(StrEnum):
     ROUND_ROBIN = "round_robin"
     WEIGHTED = "weighted"
     LEAST_CONN = "least_conn"

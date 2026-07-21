@@ -1,14 +1,13 @@
 """Queue drain and timeout math."""
-from __future__ import annotations
 
-from typing import Tuple
+from __future__ import annotations
 
 
 def drain_queue(
     backlog: int,
     drain_rate: int,
     timeout_ticks: int,
-) -> Tuple[int, int, int]:
+) -> tuple[int, int, int]:
     """Process a per-tick backlog.
 
     Args:

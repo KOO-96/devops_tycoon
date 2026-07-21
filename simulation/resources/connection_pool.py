@@ -1,10 +1,9 @@
 """Database connection pool allocation."""
+
 from __future__ import annotations
 
-from typing import Tuple
 
-
-def allocate_connections(demand: int, max_connections: int) -> Tuple[int, int]:
+def allocate_connections(demand: int, max_connections: int) -> tuple[int, int]:
     """Allocate up to ``max_connections`` for ``demand`` queries this tick.
 
     Returns ``(active, waiting)``. When demand exceeds the pool, the excess
