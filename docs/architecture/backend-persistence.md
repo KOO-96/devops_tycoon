@@ -34,6 +34,20 @@ events). A gap is **not** a missing event. Clients replay with
 `(session_id, after_cursor)` where `after_cursor` is exclusive, and de-duplicate
 by `event_id` and/or `cursor`.
 
+### Pagination (`GET /events`)
+
+- `after_cursor` is **exclusive** (returns events with `cursor > after_cursor`);
+  default `0`.
+- `limit` default **100**, capped at **1000** (`events_page_default` /
+  `events_page_max`; the service clamps over-large values).
+- Results are ordered by ascending `cursor`.
+- If the returned count **equals the effective limit**, more events may exist:
+  request the next page with `after_cursor` = the last returned event's `cursor`.
+- A session's cursors ascend but may have **gaps** (numbers consumed by other
+  sessions) — a gap is not a lost event.
+- The response is `{session_id, events[]}`. `next_cursor`/`has_more` are a possible
+  future addition (BACK-FU); for now derive paging from the rules above.
+
 ## Idempotency (BACK-FU-001)
 
 - Backend assigns `sequence` and persists permanent results in `game_commands`

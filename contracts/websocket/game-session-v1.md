@@ -26,16 +26,45 @@ All messages are JSON:
 }
 ```
 
+Every message includes all five envelope fields. `cursor` is **always an
+integer**; for messages other than `DOMAIN_EVENT` it is `0` (a placeholder, not a
+valid event cursor — ignore it). Only `DOMAIN_EVENT.cursor` is meaningful for
+resume/de-duplication.
+
 ## Message types
 
-| type | when | payload |
-|------|------|---------|
-| `SESSION_STATE` | after connect + replay | session summary (tick, revision, economy, incidents) |
-| `SESSION_SNAPSHOT` | reserved (full snapshot on demand) | full simulation snapshot |
-| `DOMAIN_EVENT` | replay + live | event envelope (see below) |
-| `COMMAND_RESULT` | reserved (future WS command path) | command result |
-| `ERROR` | failure (e.g. unknown session) | `{code, message}` |
-| `HEARTBEAT` | idle keepalive (~15s) | `{}` |
+| type | when | `cursor` | payload |
+|------|------|----------|---------|
+| `SESSION_STATE` | after connect + replay | `0` | session summary (tick, revision, economy, incidents) |
+| `SESSION_SNAPSHOT` | reserved (full snapshot on demand) | `0` | full simulation snapshot |
+| `DOMAIN_EVENT` | replay + catch-up + live | event cursor | event envelope (see below) |
+| `COMMAND_RESULT` | reserved (future WS command path) | `0` | command result |
+| `ERROR` | failure (e.g. unknown session) | `0` | `{code, message}` |
+| `HEARTBEAT` | idle keepalive (~15s) | `0` | `{}` |
+
+## Message ordering (client-visible)
+
+On a successful connection the server sends, in this exact order:
+
+1. `DOMAIN_EVENT` × N — **replay** of durable events with `cursor > after_cursor`
+   (may be zero).
+2. `SESSION_STATE` — one summary snapshot.
+3. `DOMAIN_EVENT` × M — **catch-up** of events committed during replay / not
+   published (may be zero).
+4. `DOMAIN_EVENT` (live) interleaved with `HEARTBEAT` (~15s idle) — steady state.
+
+Live events with `cursor <= ` the highest already-delivered cursor are dropped
+server-side (dedup). If the session does not exist, the server sends a single
+`ERROR` and closes (no `SESSION_STATE`).
+
+## Forward compatibility
+
+- `protocol_version` is currently `1`. A client MUST check it and reject/log a
+  mismatch rather than assume field shapes.
+- A client MUST **ignore unknown `message_type` values** (new types may be added
+  under the same `protocol_version`); do not treat them as errors.
+- Inbound client messages are ignored in the MVP (used only for disconnect
+  detection).
 
 ## Event envelope (`payload` of DOMAIN_EVENT)
 

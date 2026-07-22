@@ -21,6 +21,22 @@ Every REST error returns:
 DB internals are never exposed; validation `details` include only field
 location/type, not raw values.
 
+The envelope is declared in OpenAPI as `ErrorResponse` (`error.code` typed by the
+`ErrorCode` enum) and is referenced by every route's `responses` for each HTTP
+status it can return (404/409/422/500/503 as applicable). FastAPI's default
+`HTTPValidationError` schema is overridden so the documented 422 matches the
+envelope the app actually returns.
+
+`REVISION_CONFLICT` carries recovery details:
+
+```json
+{ "server_revision": 4, "provided_revision": 3 }
+```
+
+Frontend flow: read `server_revision` → reload the summary/snapshot → retry with a
+**new** `command_id`. (An idempotent retry of the *same* `command_id` returns the
+stored result even when the revision is stale.)
+
 ## Codes → HTTP
 
 | Code | HTTP | Meaning |
@@ -30,7 +46,7 @@ location/type, not raw values.
 | REVISION_CONFLICT | 409 | stale `expected_revision` |
 | IDEMPOTENCY_CONFLICT | 409 | same `command_id`, different payload |
 | COMMAND_OUT_OF_ORDER | 409 | reserved (sequences are backend-issued) |
-| COMMAND_REJECTED | 422 | unknown command type (pre-simulation) |
+| COMMAND_REJECTED | 422 | unknown command type at the service layer (over HTTP this is now caught earlier as VALIDATION_ERROR by the discriminated union) |
 | SNAPSHOT_VERSION_UNSUPPORTED | 422 | stored snapshot version unsupported |
 | MANUAL_TICK_DISABLED | 403 | dev-only advance endpoint disabled |
 | SIMULATION_EXECUTION_FAILED | 500 | unexpected simulation fault |
