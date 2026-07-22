@@ -1,0 +1,2125 @@
+{
+  "components": {
+    "schemas": {
+      "AddNodeCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "command_id": {
+            "description": "Client idempotency key, unique per session. Free-form string.",
+            "minLength": 1,
+            "title": "Command Id",
+            "type": "string"
+          },
+          "command_type": {
+            "const": "ADD_NODE",
+            "title": "Command Type",
+            "type": "string"
+          },
+          "expected_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optimistic concurrency check; omit to skip. See REVISION_CONFLICT.",
+            "title": "Expected Revision"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/AddNodePayload"
+          }
+        },
+        "required": [
+          "command_id",
+          "command_type",
+          "payload"
+        ],
+        "title": "AddNodeCommand",
+        "type": "object"
+      },
+      "AddNodePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "max_connections": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "postgresql only.",
+            "title": "Max Connections"
+          },
+          "mem_leak_per_tick": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "app_server only.",
+            "title": "Mem Leak Per Tick"
+          },
+          "node_kind": {
+            "enum": [
+              "app_server",
+              "load_balancer",
+              "redis",
+              "postgresql"
+            ],
+            "title": "Node Kind",
+            "type": "string"
+          },
+          "queue_capacity": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "app_server only.",
+            "title": "Queue Capacity"
+          },
+          "target": {
+            "description": "New node id (must be unique).",
+            "minLength": 1,
+            "title": "Target",
+            "type": "string"
+          },
+          "weight": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "app_server only.",
+            "title": "Weight"
+          }
+        },
+        "required": [
+          "target",
+          "node_kind"
+        ],
+        "title": "AddNodePayload",
+        "type": "object"
+      },
+      "AdvanceRequest": {
+        "properties": {
+          "expected_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Revision"
+          },
+          "ticks": {
+            "minimum": 0.0,
+            "title": "Ticks",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ticks"
+        ],
+        "title": "AdvanceRequest",
+        "type": "object"
+      },
+      "AdvanceResponse": {
+        "properties": {
+          "current_tick": {
+            "title": "Current Tick",
+            "type": "integer"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/EventEnvelope"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "session_revision": {
+            "title": "Session Revision",
+            "type": "integer"
+          },
+          "state_summary": {
+            "additionalProperties": true,
+            "title": "State Summary",
+            "type": "object"
+          }
+        },
+        "required": [
+          "session_revision",
+          "current_tick",
+          "events",
+          "state_summary"
+        ],
+        "title": "AdvanceResponse",
+        "type": "object"
+      },
+      "CommandResponse": {
+        "properties": {
+          "command_id": {
+            "description": "Echoes the client idempotency key.",
+            "title": "Command Id",
+            "type": "string"
+          },
+          "current_tick": {
+            "title": "Current Tick",
+            "type": "integer"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/EventEnvelope"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReasonCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sequence": {
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "session_revision": {
+            "title": "Session Revision",
+            "type": "integer"
+          },
+          "state_summary": {
+            "additionalProperties": true,
+            "title": "State Summary",
+            "type": "object"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CommandStatus"
+          }
+        },
+        "required": [
+          "command_id",
+          "sequence",
+          "status",
+          "session_revision",
+          "current_tick",
+          "events",
+          "state_summary"
+        ],
+        "title": "CommandResponse",
+        "type": "object"
+      },
+      "CommandStatus": {
+        "description": "Stable outcome of a command application (branch on this, not `message`).",
+        "enum": [
+          "APPLIED",
+          "ALREADY_APPLIED",
+          "DUPLICATE_COMMAND_ID",
+          "COMMAND_OUT_OF_ORDER",
+          "COMMAND_REJECTED"
+        ],
+        "title": "CommandStatus",
+        "type": "string"
+      },
+      "ConnectCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "command_id": {
+            "description": "Client idempotency key, unique per session. Free-form string.",
+            "minLength": 1,
+            "title": "Command Id",
+            "type": "string"
+          },
+          "command_type": {
+            "const": "CONNECT",
+            "title": "Command Type",
+            "type": "string"
+          },
+          "expected_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optimistic concurrency check; omit to skip. See REVISION_CONFLICT.",
+            "title": "Expected Revision"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/ConnectPayload"
+          }
+        },
+        "required": [
+          "command_id",
+          "command_type",
+          "payload"
+        ],
+        "title": "ConnectCommand",
+        "type": "object"
+      },
+      "ConnectPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "target": {
+            "description": "Source node id.",
+            "minLength": 1,
+            "title": "Target",
+            "type": "string"
+          },
+          "to": {
+            "description": "Destination node id.",
+            "minLength": 1,
+            "title": "To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target",
+          "to"
+        ],
+        "title": "ConnectPayload",
+        "type": "object"
+      },
+      "CreateSessionRequest": {
+        "properties": {
+          "seed": {
+            "default": 0,
+            "title": "Seed",
+            "type": "integer"
+          },
+          "users": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Users",
+            "type": "integer"
+          }
+        },
+        "title": "CreateSessionRequest",
+        "type": "object"
+      },
+      "CreateSessionResponse": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "current_tick": {
+            "title": "Current Tick",
+            "type": "integer"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "session_id": {
+            "format": "uuid",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "state_version": {
+            "title": "State Version",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "status",
+          "revision",
+          "current_tick",
+          "state_version",
+          "created_at"
+        ],
+        "title": "CreateSessionResponse",
+        "type": "object"
+      },
+      "DeployCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "command_id": {
+            "description": "Client idempotency key, unique per session. Free-form string.",
+            "minLength": 1,
+            "title": "Command Id",
+            "type": "string"
+          },
+          "command_type": {
+            "const": "DEPLOY",
+            "title": "Command Type",
+            "type": "string"
+          },
+          "expected_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optimistic concurrency check; omit to skip. See REVISION_CONFLICT.",
+            "title": "Expected Revision"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/DeployPayload"
+          }
+        },
+        "required": [
+          "command_id",
+          "command_type",
+          "payload"
+        ],
+        "title": "DeployCommand",
+        "type": "object"
+      },
+      "DeployPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "mem_leak_per_tick": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mem Leak Per Tick"
+          },
+          "target": {
+            "description": "App server node id.",
+            "minLength": 1,
+            "title": "Target",
+            "type": "string"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "required": [
+          "target"
+        ],
+        "title": "DeployPayload",
+        "type": "object"
+      },
+      "DisableFeatureCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "command_id": {
+            "description": "Client idempotency key, unique per session. Free-form string.",
+            "minLength": 1,
+            "title": "Command Id",
+            "type": "string"
+          },
+          "command_type": {
+            "const": "DISABLE_FEATURE",
+            "title": "Command Type",
+            "type": "string"
+          },
+          "expected_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optimistic concurrency check; omit to skip. See REVISION_CONFLICT.",
+            "title": "Expected Revision"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/DisableFeaturePayload"
+          }
+        },
+        "required": [
+          "command_id",
+          "command_type",
+          "payload"
+        ],
+        "title": "DisableFeatureCommand",
+        "type": "object"
+      },
+      "DisableFeaturePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "target": {
+            "default": "",
+            "description": "Feature/flag id (ops-relief hook).",
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "title": "DisableFeaturePayload",
+        "type": "object"
+      },
+      "DisableServerCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "command_id": {
+            "description": "Client idempotency key, unique per session. Free-form string.",
+            "minLength": 1,
+            "title": "Command Id",
+            "type": "string"
+          },
+          "command_type": {
+            "const": "DISABLE_SERVER",
+            "title": "Command Type",
+            "type": "string"
+          },
+          "expected_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optimistic concurrency check; omit to skip. See REVISION_CONFLICT.",
+            "title": "Expected Revision"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/DisableServerPayload"
+          }
+        },
+        "required": [
+          "command_id",
+          "command_type",
+          "payload"
+        ],
+        "title": "DisableServerCommand",
+        "type": "object"
+      },
+      "DisableServerPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "target": {
+            "description": "App server node id.",
+            "minLength": 1,
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target"
+        ],
+        "title": "DisableServerPayload",
+        "type": "object"
+      },
+      "DisconnectCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "command_id": {
+            "description": "Client idempotency key, unique per session. Free-form string.",
+            "minLength": 1,
+            "title": "Command Id",
+            "type": "string"
+          },
+          "command_type": {
+            "const": "DISCONNECT",
+            "title": "Command Type",
+            "type": "string"
+          },
+          "expected_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optimistic concurrency check; omit to skip. See REVISION_CONFLICT.",
+            "title": "Expected Revision"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/DisconnectPayload"
+          }
+        },
+        "required": [
+          "command_id",
+          "command_type",
+          "payload"
+        ],
+        "title": "DisconnectCommand",
+        "type": "object"
+      },
+      "DisconnectPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "target": {
+            "description": "Source node id.",
+            "minLength": 1,
+            "title": "Target",
+            "type": "string"
+          },
+          "to": {
+            "description": "Destination node id.",
+            "minLength": 1,
+            "title": "To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target",
+          "to"
+        ],
+        "title": "DisconnectPayload",
+        "type": "object"
+      },
+      "EconomySummary": {
+        "properties": {
+          "cash": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cash"
+          },
+          "cost_total": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Total"
+          },
+          "revenue_total": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revenue Total"
+          }
+        },
+        "title": "EconomySummary",
+        "type": "object"
+      },
+      "EnableServerCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "command_id": {
+            "description": "Client idempotency key, unique per session. Free-form string.",
+            "minLength": 1,
+            "title": "Command Id",
+            "type": "string"
+          },
+          "command_type": {
+            "const": "ENABLE_SERVER",
+            "title": "Command Type",
+            "type": "string"
+          },
+          "expected_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optimistic concurrency check; omit to skip. See REVISION_CONFLICT.",
+            "title": "Expected Revision"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/EnableServerPayload"
+          }
+        },
+        "required": [
+          "command_id",
+          "command_type",
+          "payload"
+        ],
+        "title": "EnableServerCommand",
+        "type": "object"
+      },
+      "EnableServerPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "target": {
+            "description": "App server node id.",
+            "minLength": 1,
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target"
+        ],
+        "title": "EnableServerPayload",
+        "type": "object"
+      },
+      "ErrorBody": {
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/ErrorCode"
+          },
+          "details": {
+            "additionalProperties": true,
+            "title": "Details",
+            "type": "object"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "request_id": {
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "request_id"
+        ],
+        "title": "ErrorBody",
+        "type": "object"
+      },
+      "ErrorCode": {
+        "enum": [
+          "VALIDATION_ERROR",
+          "SESSION_NOT_FOUND",
+          "REVISION_CONFLICT",
+          "IDEMPOTENCY_CONFLICT",
+          "COMMAND_OUT_OF_ORDER",
+          "COMMAND_REJECTED",
+          "SNAPSHOT_VERSION_UNSUPPORTED",
+          "MANUAL_TICK_DISABLED",
+          "SIMULATION_EXECUTION_FAILED",
+          "DATABASE_UNAVAILABLE",
+          "EVENT_BROKER_UNAVAILABLE",
+          "INTERNAL_ERROR"
+        ],
+        "title": "ErrorCode",
+        "type": "string"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorBody"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "title": "ErrorResponse",
+        "type": "object"
+      },
+      "EventEnvelope": {
+        "properties": {
+          "cursor": {
+            "title": "Cursor",
+            "type": "integer"
+          },
+          "event_id": {
+            "format": "uuid",
+            "title": "Event Id",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "session_id": {
+            "format": "uuid",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "session_revision": {
+            "title": "Session Revision",
+            "type": "integer"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
+          },
+          "tick": {
+            "title": "Tick",
+            "type": "integer"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event_id",
+          "cursor",
+          "session_id",
+          "session_revision",
+          "tick",
+          "type"
+        ],
+        "title": "EventEnvelope",
+        "type": "object"
+      },
+      "EventListResponse": {
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/EventEnvelope"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "session_id": {
+            "format": "uuid",
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "events"
+        ],
+        "title": "EventListResponse",
+        "type": "object"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "HealthResponse",
+        "type": "object"
+      },
+      "IncidentSummary": {
+        "properties": {
+          "phase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
+          }
+        },
+        "title": "IncidentSummary",
+        "type": "object"
+      },
+      "PauseCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "command_id": {
+            "description": "Client idempotency key, unique per session. Free-form string.",
+            "minLength": 1,
+            "title": "Command Id",
+            "type": "string"
+          },
+          "command_type": {
+            "const": "PAUSE",
+            "title": "Command Type",
+            "type": "string"
+          },
+          "expected_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optimistic concurrency check; omit to skip. See REVISION_CONFLICT.",
+            "title": "Expected Revision"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/PausePayload"
+          }
+        },
+        "required": [
+          "command_id",
+          "command_type",
+          "payload"
+        ],
+        "title": "PauseCommand",
+        "type": "object"
+      },
+      "PausePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "paused": {
+            "default": true,
+            "title": "Paused",
+            "type": "boolean"
+          }
+        },
+        "title": "PausePayload",
+        "type": "object"
+      },
+      "ReadinessComponent": {
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "title": "ReadinessComponent",
+        "type": "object"
+      },
+      "ReadinessResponse": {
+        "properties": {
+          "components": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ReadinessComponent"
+            },
+            "title": "Components",
+            "type": "object"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "supported_state_version": {
+            "title": "Supported State Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "status",
+          "components",
+          "supported_state_version"
+        ],
+        "title": "ReadinessResponse",
+        "type": "object"
+      },
+      "ReasonCode": {
+        "description": "Stable `reason_code` values emitted with COMMAND_REJECTED.\n\nMirrors the reasons produced by the simulation command handlers\n(`simulation.commands`) plus the adapter fallback. New values are added via a\ncontract version bump, never left as a free string.",
+        "enum": [
+          "duplicate_command_id",
+          "already_applied",
+          "command_out_of_order",
+          "unknown_command_type",
+          "invalid_or_duplicate_node_id",
+          "unknown_node_kind",
+          "node_not_found",
+          "missing_node",
+          "connection_not_allowed",
+          "already_connected",
+          "not_connected",
+          "lb_not_found",
+          "invalid_algorithm",
+          "server_not_found",
+          "cache_not_found",
+          "db_not_found",
+          "missing_target_version",
+          "invalid_speed",
+          "rejected"
+        ],
+        "title": "ReasonCode",
+        "type": "string"
+      },
+      "RemoveNodeCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "command_id": {
+            "description": "Client idempotency key, unique per session. Free-form string.",
+            "minLength": 1,
+            "title": "Command Id",
+            "type": "string"
+          },
+          "command_type": {
+            "const": "REMOVE_NODE",
+            "title": "Command Type",
+            "type": "string"
+          },
+          "expected_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optimistic concurrency check; omit to skip. See REVISION_CONFLICT.",
+            "title": "Expected Revision"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/RemoveNodePayload"
+          }
+        },
+        "required": [
+          "command_id",
+          "command_type",
+          "payload"
+        ],
+        "title": "RemoveNodeCommand",
+        "type": "object"
+      },
+      "RemoveNodePayload": {
+        "additionalProperties": false,
+        "properties": {
+          "target": {
+            "description": "Node id to remove.",
+            "minLength": 1,
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target"
+        ],
+        "title": "RemoveNodePayload",
+        "type": "object"
+      },
+      "RollbackCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "command_id": {
+            "description": "Client idempotency key, unique per session. Free-form string.",
+            "minLength": 1,
+            "title": "Command Id",
+            "type": "string"
+          },
+          "command_type": {
+            "const": "ROLLBACK",
+            "title": "Command Type",
+            "type": "string"
+          },
+          "expected_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optimistic concurrency check; omit to skip. See REVISION_CONFLICT.",
+            "title": "Expected Revision"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/RollbackPayload"
+          }
+        },
+        "required": [
+          "command_id",
+          "command_type",
+          "payload"
+        ],
+        "title": "RollbackCommand",
+        "type": "object"
+      },
+      "RollbackPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "target": {
+            "description": "App server node id.",
+            "minLength": 1,
+            "title": "Target",
+            "type": "string"
+          },
+          "to_version": {
+            "description": "Version to roll back to.",
+            "minLength": 1,
+            "title": "To Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target",
+          "to_version"
+        ],
+        "title": "RollbackPayload",
+        "type": "object"
+      },
+      "SessionSummaryResponse": {
+        "properties": {
+          "active_incidents": {
+            "items": {
+              "$ref": "#/components/schemas/IncidentSummary"
+            },
+            "title": "Active Incidents",
+            "type": "array"
+          },
+          "current_tick": {
+            "title": "Current Tick",
+            "type": "integer"
+          },
+          "economy": {
+            "$ref": "#/components/schemas/EconomySummary"
+          },
+          "investor_trust": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Investor Trust"
+          },
+          "paused": {
+            "title": "Paused",
+            "type": "boolean"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "session_id": {
+            "format": "uuid",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "speed": {
+            "title": "Speed",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "user_trust": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Trust"
+          }
+        },
+        "required": [
+          "session_id",
+          "status",
+          "revision",
+          "current_tick",
+          "speed",
+          "paused",
+          "economy",
+          "active_incidents",
+          "updated_at"
+        ],
+        "title": "SessionSummaryResponse",
+        "type": "object"
+      },
+      "SetDbPoolCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "command_id": {
+            "description": "Client idempotency key, unique per session. Free-form string.",
+            "minLength": 1,
+            "title": "Command Id",
+            "type": "string"
+          },
+          "command_type": {
+            "const": "SET_DB_POOL",
+            "title": "Command Type",
+            "type": "string"
+          },
+          "expected_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optimistic concurrency check; omit to skip. See REVISION_CONFLICT.",
+            "title": "Expected Revision"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/SetDbPoolPayload"
+          }
+        },
+        "required": [
+          "command_id",
+          "command_type",
+          "payload"
+        ],
+        "title": "SetDbPoolCommand",
+        "type": "object"
+      },
+      "SetDbPoolPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "max_connections": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Connections"
+          },
+          "target": {
+            "description": "PostgreSQL node id.",
+            "minLength": 1,
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target"
+        ],
+        "title": "SetDbPoolPayload",
+        "type": "object"
+      },
+      "SetLbConfigCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "command_id": {
+            "description": "Client idempotency key, unique per session. Free-form string.",
+            "minLength": 1,
+            "title": "Command Id",
+            "type": "string"
+          },
+          "command_type": {
+            "const": "SET_LB_CONFIG",
+            "title": "Command Type",
+            "type": "string"
+          },
+          "expected_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optimistic concurrency check; omit to skip. See REVISION_CONFLICT.",
+            "title": "Expected Revision"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/SetLbConfigPayload"
+          }
+        },
+        "required": [
+          "command_id",
+          "command_type",
+          "payload"
+        ],
+        "title": "SetLbConfigCommand",
+        "type": "object"
+      },
+      "SetLbConfigPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "algorithm": {
+            "anyOf": [
+              {
+                "enum": [
+                  "round_robin",
+                  "weighted",
+                  "least_conn"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Algorithm"
+          },
+          "sticky": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sticky"
+          },
+          "target": {
+            "description": "Load balancer node id.",
+            "minLength": 1,
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target"
+        ],
+        "title": "SetLbConfigPayload",
+        "type": "object"
+      },
+      "SetRedisConfigCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "command_id": {
+            "description": "Client idempotency key, unique per session. Free-form string.",
+            "minLength": 1,
+            "title": "Command Id",
+            "type": "string"
+          },
+          "command_type": {
+            "const": "SET_REDIS_CONFIG",
+            "title": "Command Type",
+            "type": "string"
+          },
+          "expected_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optimistic concurrency check; omit to skip. See REVISION_CONFLICT.",
+            "title": "Expected Revision"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/SetRedisConfigPayload"
+          }
+        },
+        "required": [
+          "command_id",
+          "command_type",
+          "payload"
+        ],
+        "title": "SetRedisConfigCommand",
+        "type": "object"
+      },
+      "SetRedisConfigPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "capacity_entries": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capacity Entries"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "target": {
+            "description": "Redis cache node id.",
+            "minLength": 1,
+            "title": "Target",
+            "type": "string"
+          },
+          "ttl_ticks": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ttl Ticks"
+          }
+        },
+        "required": [
+          "target"
+        ],
+        "title": "SetRedisConfigPayload",
+        "type": "object"
+      },
+      "SetSpeedCommand": {
+        "additionalProperties": false,
+        "properties": {
+          "command_id": {
+            "description": "Client idempotency key, unique per session. Free-form string.",
+            "minLength": 1,
+            "title": "Command Id",
+            "type": "string"
+          },
+          "command_type": {
+            "const": "SET_SPEED",
+            "title": "Command Type",
+            "type": "string"
+          },
+          "expected_revision": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optimistic concurrency check; omit to skip. See REVISION_CONFLICT.",
+            "title": "Expected Revision"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/SetSpeedPayload"
+          }
+        },
+        "required": [
+          "command_id",
+          "command_type",
+          "payload"
+        ],
+        "title": "SetSpeedCommand",
+        "type": "object"
+      },
+      "SetSpeedPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "speed": {
+            "title": "Speed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "speed"
+        ],
+        "title": "SetSpeedPayload",
+        "type": "object"
+      },
+      "SnapshotResponse": {
+        "properties": {
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "session_id": {
+            "format": "uuid",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "simulation_state_version": {
+            "title": "Simulation State Version",
+            "type": "integer"
+          },
+          "snapshot": {
+            "additionalProperties": true,
+            "title": "Snapshot",
+            "type": "object"
+          }
+        },
+        "required": [
+          "session_id",
+          "revision",
+          "simulation_state_version",
+          "snapshot"
+        ],
+        "title": "SnapshotResponse",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "devops-tycoon-backend",
+    "version": "1.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/game-sessions": {
+      "post": {
+        "operationId": "create_session_api_v1_game_sessions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSessionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateSessionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "VALIDATION_ERROR \u2014 malformed request (schema, strict ints, unknown command)."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR \u2014 unhandled server fault."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "DATABASE_UNAVAILABLE."
+          }
+        },
+        "summary": "Create Session",
+        "tags": [
+          "game-sessions"
+        ]
+      }
+    },
+    "/api/v1/game-sessions/{session_id}": {
+      "get": {
+        "operationId": "get_session_api_v1_game_sessions__session_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionSummaryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "SESSION_NOT_FOUND \u2014 unknown session id."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "VALIDATION_ERROR \u2014 malformed request (schema, strict ints, unknown command)."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR \u2014 unhandled server fault."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "DATABASE_UNAVAILABLE."
+          }
+        },
+        "summary": "Get Session",
+        "tags": [
+          "game-sessions"
+        ]
+      }
+    },
+    "/api/v1/game-sessions/{session_id}/commands": {
+      "post": {
+        "operationId": "post_command_api_v1_game_sessions__session_id__commands_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "discriminator": {
+                  "mapping": {
+                    "ADD_NODE": "#/components/schemas/AddNodeCommand",
+                    "CONNECT": "#/components/schemas/ConnectCommand",
+                    "DEPLOY": "#/components/schemas/DeployCommand",
+                    "DISABLE_FEATURE": "#/components/schemas/DisableFeatureCommand",
+                    "DISABLE_SERVER": "#/components/schemas/DisableServerCommand",
+                    "DISCONNECT": "#/components/schemas/DisconnectCommand",
+                    "ENABLE_SERVER": "#/components/schemas/EnableServerCommand",
+                    "PAUSE": "#/components/schemas/PauseCommand",
+                    "REMOVE_NODE": "#/components/schemas/RemoveNodeCommand",
+                    "ROLLBACK": "#/components/schemas/RollbackCommand",
+                    "SET_DB_POOL": "#/components/schemas/SetDbPoolCommand",
+                    "SET_LB_CONFIG": "#/components/schemas/SetLbConfigCommand",
+                    "SET_REDIS_CONFIG": "#/components/schemas/SetRedisConfigCommand",
+                    "SET_SPEED": "#/components/schemas/SetSpeedCommand"
+                  },
+                  "propertyName": "command_type"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/AddNodeCommand"
+                  },
+                  {
+                    "$ref": "#/components/schemas/RemoveNodeCommand"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ConnectCommand"
+                  },
+                  {
+                    "$ref": "#/components/schemas/DisconnectCommand"
+                  },
+                  {
+                    "$ref": "#/components/schemas/SetLbConfigCommand"
+                  },
+                  {
+                    "$ref": "#/components/schemas/EnableServerCommand"
+                  },
+                  {
+                    "$ref": "#/components/schemas/DisableServerCommand"
+                  },
+                  {
+                    "$ref": "#/components/schemas/SetRedisConfigCommand"
+                  },
+                  {
+                    "$ref": "#/components/schemas/SetDbPoolCommand"
+                  },
+                  {
+                    "$ref": "#/components/schemas/DeployCommand"
+                  },
+                  {
+                    "$ref": "#/components/schemas/RollbackCommand"
+                  },
+                  {
+                    "$ref": "#/components/schemas/DisableFeatureCommand"
+                  },
+                  {
+                    "$ref": "#/components/schemas/PauseCommand"
+                  },
+                  {
+                    "$ref": "#/components/schemas/SetSpeedCommand"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "SESSION_NOT_FOUND \u2014 unknown session id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "REVISION_CONFLICT (stale expected_revision) or IDEMPOTENCY_CONFLICT."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "VALIDATION_ERROR \u2014 malformed request (schema, strict ints, unknown command)."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "SIMULATION_EXECUTION_FAILED or INTERNAL_ERROR."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "DATABASE_UNAVAILABLE or EVENT_BROKER_UNAVAILABLE."
+          }
+        },
+        "summary": "Post Command",
+        "tags": [
+          "game-sessions"
+        ]
+      }
+    },
+    "/api/v1/game-sessions/{session_id}/events": {
+      "get": {
+        "operationId": "list_events_api_v1_game_sessions__session_id__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Exclusive cursor; returns events with cursor > this value.",
+            "in": "query",
+            "name": "after_cursor",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "Exclusive cursor; returns events with cursor > this value.",
+              "minimum": 0,
+              "title": "After Cursor",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Max events to return. Defaults to 100, capped at 1000. If the result count equals the effective limit, request the next page using the last event's cursor as after_cursor. Cursors are globally monotonic, so a session's cursors ascend but may have gaps (not lost events).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Max events to return. Defaults to 100, capped at 1000. If the result count equals the effective limit, request the next page using the last event's cursor as after_cursor. Cursors are globally monotonic, so a session's cursors ascend but may have gaps (not lost events).",
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "SESSION_NOT_FOUND \u2014 unknown session id."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "VALIDATION_ERROR \u2014 malformed request (schema, strict ints, unknown command)."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR \u2014 unhandled server fault."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "DATABASE_UNAVAILABLE."
+          }
+        },
+        "summary": "List Events",
+        "tags": [
+          "events"
+        ]
+      }
+    },
+    "/api/v1/game-sessions/{session_id}/snapshot": {
+      "get": {
+        "operationId": "get_snapshot_api_v1_game_sessions__session_id__snapshot_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "SESSION_NOT_FOUND \u2014 unknown session id."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "VALIDATION_ERROR \u2014 malformed request (schema, strict ints, unknown command)."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "INTERNAL_ERROR \u2014 unhandled server fault."
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "DATABASE_UNAVAILABLE."
+          }
+        },
+        "summary": "Get Snapshot",
+        "tags": [
+          "game-sessions"
+        ]
+      }
+    },
+    "/health/live": {
+      "get": {
+        "operationId": "live_health_live_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Live",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "operationId": "ready_health_ready_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadinessResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ready",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/internal/v1/game-sessions/{session_id}/advance": {
+      "post": {
+        "operationId": "advance_session_internal_v1_game_sessions__session_id__advance_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdvanceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdvanceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "MANUAL_TICK_DISABLED \u2014 dev-only advance endpoint is disabled."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "SESSION_NOT_FOUND \u2014 unknown session id."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "REVISION_CONFLICT \u2014 stale expected_revision."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "VALIDATION_ERROR \u2014 malformed request (schema, strict ints, unknown command)."
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "SIMULATION_EXECUTION_FAILED or INTERNAL_ERROR."
+          }
+        },
+        "summary": "Advance Session",
+        "tags": [
+          "internal"
+        ]
+      }
+    }
+  }
+}
