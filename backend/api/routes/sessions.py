@@ -4,10 +4,16 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends
 
+from backend.api.schemas.commands import CommandRequest
+from backend.api.schemas.error_responses import (
+    ADVANCE_RESPONSES,
+    COMMAND_RESPONSES,
+    CREATE_SESSION_RESPONSES,
+    READ_SESSION_RESPONSES,
+)
 from backend.api.schemas.models import (
     AdvanceRequest,
     AdvanceResponse,
-    CommandRequest,
     CommandResponse,
     CreateSessionRequest,
     CreateSessionResponse,
@@ -20,7 +26,12 @@ from backend.errors import ApiError, ErrorCode
 router = APIRouter(tags=["game-sessions"])
 
 
-@router.post("/game-sessions", response_model=CreateSessionResponse, status_code=201)
+@router.post(
+    "/game-sessions",
+    response_model=CreateSessionResponse,
+    status_code=201,
+    responses=CREATE_SESSION_RESPONSES,
+)
 async def create_session(
     body: CreateSessionRequest, services: Services = Depends(get_services)
 ) -> CreateSessionResponse:
@@ -28,7 +39,11 @@ async def create_session(
     return CreateSessionResponse(**result)
 
 
-@router.get("/game-sessions/{session_id}", response_model=SessionSummaryResponse)
+@router.get(
+    "/game-sessions/{session_id}",
+    response_model=SessionSummaryResponse,
+    responses=READ_SESSION_RESPONSES,
+)
 async def get_session(
     session_id: str, services: Services = Depends(get_services)
 ) -> SessionSummaryResponse:
@@ -36,7 +51,11 @@ async def get_session(
     return SessionSummaryResponse(**result)
 
 
-@router.get("/game-sessions/{session_id}/snapshot", response_model=SnapshotResponse)
+@router.get(
+    "/game-sessions/{session_id}/snapshot",
+    response_model=SnapshotResponse,
+    responses=READ_SESSION_RESPONSES,
+)
 async def get_snapshot(
     session_id: str, services: Services = Depends(get_services)
 ) -> SnapshotResponse:
@@ -44,7 +63,11 @@ async def get_snapshot(
     return SnapshotResponse(**result)
 
 
-@router.post("/game-sessions/{session_id}/commands", response_model=CommandResponse)
+@router.post(
+    "/game-sessions/{session_id}/commands",
+    response_model=CommandResponse,
+    responses=COMMAND_RESPONSES,
+)
 async def post_command(
     session_id: str, body: CommandRequest, services: Services = Depends(get_services)
 ) -> CommandResponse:
@@ -52,7 +75,7 @@ async def post_command(
         session_id,
         command_id=body.command_id,
         command_type=body.command_type,
-        payload=body.payload,
+        payload=body.payload.model_dump(exclude_none=True),
         expected_revision=body.expected_revision,
     )
     return CommandResponse(**result)
@@ -62,7 +85,11 @@ async def post_command(
 internal_router = APIRouter(tags=["internal"])
 
 
-@internal_router.post("/game-sessions/{session_id}/advance", response_model=AdvanceResponse)
+@internal_router.post(
+    "/game-sessions/{session_id}/advance",
+    response_model=AdvanceResponse,
+    responses=ADVANCE_RESPONSES,
+)
 async def advance_session(
     session_id: str, body: AdvanceRequest, services: Services = Depends(get_services)
 ) -> AdvanceResponse:

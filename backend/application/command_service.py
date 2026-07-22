@@ -197,5 +197,10 @@ class CommandService:
             raise ApiError(
                 ErrorCode.REVISION_CONFLICT,
                 "Stale revision; reload the session and retry.",
-                details={"expected": expected_revision, "actual": session.revision},
+                # Frontend recovery: reload to server_revision, then retry with a
+                # NEW command_id (contract §8).
+                details={
+                    "server_revision": session.revision,
+                    "provided_revision": expected_revision,
+                },
             )
