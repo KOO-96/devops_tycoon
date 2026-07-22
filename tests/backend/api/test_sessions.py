@@ -78,8 +78,10 @@ def test_unknown_command_type_rejected(client: TestClient) -> None:
         f"/api/v1/game-sessions/{sid}/commands",
         json={"command_id": "c1", "command_type": "NOPE", "payload": {}},
     )
+    # The discriminated union rejects an unknown command_type at the API boundary
+    # (before the simulation) -> VALIDATION_ERROR.
     assert r.status_code == 422
-    assert r.json()["error"]["code"] == "COMMAND_REJECTED"
+    assert r.json()["error"]["code"] == "VALIDATION_ERROR"
 
 
 def test_revision_conflict(client: TestClient) -> None:

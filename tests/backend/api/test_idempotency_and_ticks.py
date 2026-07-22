@@ -77,7 +77,8 @@ def test_same_command_id_across_sessions_is_independent(client: TestClient) -> N
 
 
 def test_same_id_different_command_type_conflicts(client: TestClient) -> None:
-    # Same command_id + same payload but different command_type -> IDEMPOTENCY_CONFLICT.
+    # Same command_id but a different command_type -> IDEMPOTENCY_CONFLICT (each
+    # request uses its own typed payload).
     sid = _create(client)
     client.post(
         f"/api/v1/game-sessions/{sid}/commands",
@@ -85,7 +86,7 @@ def test_same_id_different_command_type_conflicts(client: TestClient) -> None:
     )
     r = client.post(
         f"/api/v1/game-sessions/{sid}/commands",
-        json={"command_id": "c1", "command_type": "SET_SPEED", "payload": {"paused": True}},
+        json={"command_id": "c1", "command_type": "SET_SPEED", "payload": {"speed": 2}},
     )
     assert r.status_code == 409
     assert r.json()["error"]["code"] == "IDEMPOTENCY_CONFLICT"
