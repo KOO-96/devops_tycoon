@@ -59,4 +59,54 @@ describe('gameSessionStore', () => {
     store.getState().clearPending('k');
     expect(store.getState().isPending('k')).toBe(false);
   });
+
+  it('stale guard: an older snapshot never overwrites a newer one (§5)', () => {
+    store.getState().setSnapshot({
+      session_id: 's',
+      revision: 4,
+      simulation_state_version: 2,
+      snapshot: makeSnapshot({ app_servers: { 'app-4': { id: 'app-4', kind: 'app_server', enabled: true, health: 'Healthy' } } }),
+    });
+    // A late revision-3 snapshot arrives after revision 4 -> discarded.
+    store.getState().setSnapshot({
+      session_id: 's',
+      revision: 3,
+      simulation_state_version: 2,
+      snapshot: makeSnapshot({ app_servers: {} }),
+    });
+    expect(store.getState().revision).toBe(4);
+    expect(Object.keys(store.getState().snapshot!.app_servers)).toContain('app-4');
+  });
+
+  it('stale guard: an older summary is ignored', () => {
+    store.getState().setSummary(makeSummary({ revision: 4, current_tick: 40 }));
+    store.getState().setSummary(makeSummary({ revision: 3, current_tick: 10, speed: 4 }));
+    expect(store.getState().revision).toBe(4);
+    expect(store.getState().summary?.speed).toBe(1); // the rev-4 summary, not the stale rev-3
+  });
+
+  it('clears a selection that no longer exists after a snapshot update (§8)', () => {
+    store.getState().setSnapshot({
+      session_id: 's', revision: 1, simulation_state_version: 2,
+      snapshot: makeSnapshot({ app_servers: { 'app-1': { id: 'app-1', kind: 'app_server', enabled: true, health: 'Healthy' } } }),
+    });
+    store.getState().select('app-1');
+    // A newer snapshot without app-1.
+    store.getState().setSnapshot({
+      session_id: 's', revision: 2, simulation_state_version: 2,
+      snapshot: makeSnapshot({ app_servers: {} }),
+    });
+    expect(store.getState().selectedNodeId).toBeNull();
+  });
+
+  it('beginLoad resets state and enters loading for the new session/generation', () => {
+    store.getState().select('old');
+    store.getState().beginLoad('sess-2', 7);
+    const s = store.getState();
+    expect(s.loadState).toBe('loading');
+    expect(s.loadGeneration).toBe(7);
+    expect(s.sessionId).toBe('sess-2');
+    expect(s.selectedNodeId).toBeNull();
+    expect(s.snapshot).toBeNull();
+  });
 });
