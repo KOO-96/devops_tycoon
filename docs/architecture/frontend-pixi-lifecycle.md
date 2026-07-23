@@ -36,7 +36,9 @@ geometry/visual logic is separate from Pixi so it is unit-testable.
 
 Clicking a sprite (`pointertap`) and clicking the accessible `NodeList` both drive
 the same store `selectedNodeId`, so the canvas and the DOM list stay in sync. The
-`NodeList` is the keyboard/screen-reader alternative to canvas interaction.
+`NodeList` is the keyboard/screen-reader alternative to canvas interaction. When a
+snapshot update removes the selected node (e.g. REMOVE_NODE), the store clears
+`selectedNodeId` so no destroyed node stays selected (§8).
 
 ## Performance (§26)
 

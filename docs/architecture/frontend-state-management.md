@@ -45,3 +45,37 @@ A UI action has a stable `key`. `beginPending`/`clearPending` gate concurrent
 clicks: while a key is in flight, repeat clicks are ignored. The controller keeps
 an intent registry (`key → {commandId, payloadKey}`) so an identical retry reuses
 the `command_id` and a changed payload gets a new one.
+
+## Session load state machine (§5)
+
+`loadState`: `idle → loading → ready`, or → `not_found` / `recoverable_error` /
+`fatal_error`. `loadError` holds the `{code,message,requestId}`. Error codes map:
+`SESSION_NOT_FOUND → not_found`; `DATABASE_UNAVAILABLE`/`EVENT_BROKER_UNAVAILABLE`
+→ `recoverable_error` (retryable); `SNAPSHOT_VERSION_UNSUPPORTED` + any unexpected
+code → `fatal_error`. Errors are never swallowed. GamePage renders a recovery
+screen (never an empty board) for the three error states.
+
+## Single bootstrap + stale-response protection (§2–§5)
+
+All entry paths (new game, direct URL, reload, session switch, retry) go through
+`controller.bootstrapSession(sessionId)`: cleanup prior session → `beginLoad`
+(full store reset + `loading`) → summary → snapshot → event replay → connect
+socket → `ready` → start 3s polling.
+
+A monotonic `loadGeneration` (owned by the controller, mirrored into the store)
+plus `activeSessionId` guard **every** async write: a result is applied only when
+`session_id === activeSessionId AND generation === current`. Store setters add a
+second guard — `setSummary`/`setSnapshot` ignore a payload whose `revision <`
+current — so a late/older summary can never clobber newer state, and a same-
+revision snapshot (the fuller state) is kept as a separate field from the summary.
+
+## Snapshot is the board's source of truth (§6)
+
+`summary` (HUD projection) and `snapshot` (full simulation state, board/NodeList)
+are separate fields. After a state-changing command returns `APPLIED`/
+`ALREADY_APPLIED`, the controller re-fetches the snapshot so the board reflects
+backend state **without a reload**. `snapshotSyncState` (`idle|syncing|synced|
+failed`) tracks this; on failure the command is NOT re-sent — a
+`SnapshotSyncBanner` offers a manual "Refresh board" (§7). A snapshot update also
+clears a `selectedNodeId` that no longer exists (§8). Event-delta partial updates
+are a follow-up (FE-FU-005).

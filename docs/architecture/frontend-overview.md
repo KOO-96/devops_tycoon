@@ -29,8 +29,10 @@ tested without a browser.
 ## Screens
 
 - `StartPage` (`/`): create a new session (seed, users) → navigate to the game.
-- `GamePage` (`/game/:sessionId`): board + HUD + panels; attaches/replays on a
-  cold load; opens the WebSocket.
+- `GamePage` (`/game/:sessionId`): drives the single `bootstrapSession` flow
+  (summary → snapshot → event replay → socket → ready) for new-game, direct URL,
+  reload, and session switch alike; renders a recovery screen (not a blank board)
+  for `not_found` / `recoverable_error` / `fatal_error` load states.
 - `NotFoundPage` (`*`).
 
 ## Tech stack

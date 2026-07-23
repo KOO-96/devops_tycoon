@@ -55,6 +55,22 @@ The client assumes the socket may drop and that a disconnect is **not** data los
 slow consumers; the UI shows connection status honestly and never claims infinite
 stability.
 
+## Session bootstrap & error recovery
+
+Every screen entry uses one `bootstrapSession` flow (summary → snapshot → event
+replay → socket → ready). Load errors branch on `error.code`:
+`SESSION_NOT_FOUND` → a "session not found" recovery screen (New game / back to
+Start), never a blank board; `DATABASE_UNAVAILABLE`/`EVENT_BROKER_UNAVAILABLE` →
+a retryable "temporarily unavailable" screen (does not claim the game is gone);
+`SNAPSHOT_VERSION_UNSUPPORTED` → a distinct fatal/incompatible screen (advanced
+migration UX is FE-FU-006). On any fatal bootstrap the socket, polling, and Pixi
+scene are not started (or torn down), and prior session state is cleared.
+
+After a successful state-changing command the client re-fetches the snapshot so
+the board updates without a reload; a failed post-command sync surfaces a Refresh
+action and never re-sends the command (same `command_id` is only for network
+retries of the command itself, never for snapshot recovery).
+
 ## Authentication (§23 — Deferred)
 
 There is **no authentication or session ownership** yet. This is a development
