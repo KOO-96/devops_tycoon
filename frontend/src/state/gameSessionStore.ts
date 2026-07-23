@@ -6,6 +6,11 @@
  * Event application (§15) is centralized here: de-duplicate by `event_id`
  * (bounded), advance `lastProcessedCursor`, and keep a bounded display log.
  * `revision`, `current_tick`, and `state_version` are kept distinct.
+ *
+ * Session load is an explicit state machine (§5/§3): a single bootstrap flow in
+ * the controller drives `loadState`/`loadGeneration`; the store guards against
+ * stale async responses (older revision / superseded generation) so a late reply
+ * from a previous session or an out-of-order poll never overwrites newer state.
  */
 
 import { create } from 'zustand';
@@ -21,6 +26,16 @@ import type {
 
 const EVENT_LOG_CAP = 200;
 const RECENT_ID_CAP = 4096;
+
+export type LoadState =
+  | 'idle'
+  | 'loading'
+  | 'ready'
+  | 'not_found'
+  | 'recoverable_error'
+  | 'fatal_error';
+
+export type SnapshotSyncState = 'idle' | 'syncing' | 'synced' | 'failed';
 
 export interface UiError {
   code: ErrorCode;
@@ -50,10 +65,18 @@ export interface GameSessionState {
   lastProcessedCursor: number;
   pending: Record<string, PendingCommand>;
   lastError: UiError | null;
+  // Session-load state machine (§5).
+  loadState: LoadState;
+  loadError: UiError | null;
+  loadGeneration: number;
+  snapshotSyncState: SnapshotSyncState;
   // Internal, non-reactive dedup memory (bounded — §26).
   _recentEventIds: BoundedSet<string>;
 
   initFromCreate: (res: CreateSessionResponse) => void;
+  beginLoad: (sessionId: string, generation: number) => void;
+  setLoadState: (loadState: LoadState, error?: UiError | null) => void;
+  setSnapshotSyncState: (state: SnapshotSyncState) => void;
   setSummary: (summary: SessionSummary) => void;
   setSnapshot: (res: SnapshotResponse) => void;
   select: (nodeId: string | null) => void;
@@ -79,8 +102,22 @@ function freshInitial() {
     lastProcessedCursor: 0,
     pending: {} as Record<string, PendingCommand>,
     lastError: null as UiError | null,
+    loadState: 'idle' as LoadState,
+    loadError: null as UiError | null,
+    loadGeneration: 0,
+    snapshotSyncState: 'idle' as SnapshotSyncState,
     _recentEventIds: new BoundedSet<string>(RECENT_ID_CAP),
   };
+}
+
+/** True if `id` exists in any of the snapshot's node collections. */
+function snapshotHasNode(snapshot: SimulationSnapshot, id: string): boolean {
+  return (
+    id in (snapshot.load_balancers ?? {}) ||
+    id in (snapshot.app_servers ?? {}) ||
+    id in (snapshot.caches ?? {}) ||
+    id in (snapshot.databases ?? {})
+  );
 }
 
 export const useGameSessionStore = create<GameSessionState>((set, get) => ({
@@ -94,21 +131,43 @@ export const useGameSessionStore = create<GameSessionState>((set, get) => ({
       stateVersion: res.state_version,
     }),
 
+  beginLoad: (sessionId, generation) =>
+    // Full reset (clears snapshot/summary/events/dedup/pending/selection/cursor
+    // — §4) then enter `loading` for the new session + generation.
+    set({ ...freshInitial(), sessionId, loadGeneration: generation, loadState: 'loading' }),
+
+  setLoadState: (loadState, error = null) => set({ loadState, loadError: error }),
+
+  setSnapshotSyncState: (snapshotSyncState) => set({ snapshotSyncState }),
+
   setSummary: (summary) =>
-    set((state) => ({
-      summary,
-      // Summary revision/tick may be newer than what we've seen; never go backwards.
-      revision: Math.max(state.revision, summary.revision),
-      currentTick: Math.max(state.currentTick, summary.current_tick),
-    })),
+    set((state) => {
+      // Stale guard (§5): ignore an older summary; never regress the object.
+      if (summary.revision < state.revision) return {};
+      return {
+        summary,
+        revision: Math.max(state.revision, summary.revision),
+        currentTick: Math.max(state.currentTick, summary.current_tick),
+      };
+    }),
 
   setSnapshot: (res) =>
-    set((state) => ({
-      snapshot: res.snapshot,
-      stateVersion: res.simulation_state_version,
-      revision: Math.max(state.revision, res.revision),
-      currentTick: Math.max(state.currentTick, res.snapshot.clock?.tick ?? state.currentTick),
-    })),
+    set((state) => {
+      // Stale guard (§5): a snapshot older than what we've seen is discarded.
+      if (res.revision < state.revision) return {};
+      // Drop a selection that no longer exists after the snapshot changed (§8).
+      const selectedNodeId =
+        state.selectedNodeId !== null && !snapshotHasNode(res.snapshot, state.selectedNodeId)
+          ? null
+          : state.selectedNodeId;
+      return {
+        snapshot: res.snapshot,
+        stateVersion: res.simulation_state_version,
+        revision: Math.max(state.revision, res.revision),
+        currentTick: Math.max(state.currentTick, res.snapshot.clock?.tick ?? state.currentTick),
+        selectedNodeId,
+      };
+    }),
 
   select: (selectedNodeId) => set({ selectedNodeId }),
 
