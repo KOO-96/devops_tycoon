@@ -11,7 +11,7 @@ reviewable, and keeps all Foundation tests green.
 |---|---|---|---|
 | `GameCanvas.tsx` | campus render container | **Keep** | lifecycle already correct |
 | `game/pixi/createGameScene.ts` (GameScene) | tile/building/connection/effect layers | **Extend** | add layers + sprites onto the existing world/edge/node layers |
-| `game/pixi/isometric.ts` | iso transforms + layout | **Extend** | reconcile tile size (UI-D-002); add footprints |
+| `game/pixi/isometric.ts` | iso transforms + layout | **Extend** | keep 128×64 logical / 64×32 source (UI-D-002); add footprints |
 | `game/pixi/nodes.ts` | node→visual mapping | **Extend** | swap glyph placeholders for building sprites |
 | `components/common/NodeList.tsx` | accessibility + management panel | **Keep** | canvas-alternative, stays authoritative |
 | `components/hud/Hud.tsx` | top info bar | **Extend** | add Future Slots (inactive), styling |

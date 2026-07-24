@@ -1,23 +1,26 @@
 # Isometric Campus Spec
 
-- Owner: Program · Status: Proposed (to reconcile with the current PixiJS Foundation)
+- Owner: Program · Status: grid **Confirmed** (UI-D-002/003), aligned with the current PixiJS Foundation; footprints/camera details Proposed
 
-## Logical grid (Proposed — UI-D-002)
+## Logical grid (Confirmed — UI-D-002)
 
-| Parameter | Proposed | Current Foundation | Note |
-|---|---|---|---|
-| Iso tile (logical px) | 64×32 | **128×64** (`isometric.ts` DEFAULT_TILE) | Reconcile: pick one in UI-D-002 |
-| Rendering scale | integer only | n/a yet | avoid non-integer zoom/blur |
-| Building footprints | 2×2, 3×3, 4×4 tiles | 1 tile diamond placeholder | tiers scale footprint |
-| Base design resolution | 1440×810 (16:9) | — | desktop-first |
-| Min resolution | 1280×720 | — | below → collapse panels |
+| Parameter | Value | Status |
+|---|---|---|
+| Logical isometric tile | **128×64** (matches `isometric.ts` DEFAULT_TILE) | Confirmed |
+| Source art module | **64×32** | Confirmed |
+| Export / display scale | **2× integer scaling** | Confirmed |
+| Texture filtering | **nearest-neighbor** | Confirmed |
+| Building footprints | 2×2, 3×3, 4×4 tiles | Proposed |
+| Base design resolution | 1440×810 (16:9) | Confirmed (UI-D-003) |
+| Min resolution | 1280×720 | Confirmed (UI-D-003) |
 
-The current Foundation already implements iso transforms (`gridToScreen`/`screenToGrid`),
-a deterministic `layoutGrid`, and a pannable world container with `edgeLayer` + `nodeLayer`.
-UI-D-002 should either adopt 64×32 (denser, more classic pixel scale) or keep 128×64; the
-building art must be authored to whichever tile is Confirmed. Recommendation: **64×32**
-logical tile with 2× integer display scale for a crisp pixel look, but this is Proposed and
-must be validated against real sprite legibility.
+The Frontend coordinate system is **not** changed: the current Foundation already implements
+iso transforms (`gridToScreen`/`screenToGrid`), a deterministic `layoutGrid`, and a pannable
+world container with `edgeLayer` + `nodeLayer` at a 128×64 logical tile — all kept as-is.
+Artists author sprites at a **64×32 source module** (so pixel density feels right) and the
+game renders them at the **128×64** logical tile via **2× integer scaling** with
+nearest-neighbor filtering. This keeps the reference's detailed buildings legible at
+1440×810 without any Foundation rework.
 
 ## Campus zones (Proposed — UI-D-008)
 

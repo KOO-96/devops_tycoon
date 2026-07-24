@@ -1,6 +1,16 @@
 # Asset Style Guide
 
-- Owner: Program · Status: Proposed (all colours/fonts/icons are Proposed until UI-D-001/007)
+- Owner: Program · Status: genre + font-role policy **Confirmed** (UI-D-001/002/007); exact
+  hex values and specific font files remain Proposed.
+
+## Rendering model (Confirmed — Illustrated Pixel Hybrid)
+
+- **Buildings + environment + effects:** pixel-styled **illustration** — pixel outline and
+  texture, more detailed than classic low-res dots. Authored at a **64×32 source module**,
+  shown at the **128×64** logical tile via **2× integer scaling**, nearest-neighbor filtering.
+- **UI panels + body text:** crisp, normal (non-pixel) UI — not constrained to coarse dots.
+- Never force every element to low-res dots; keep pixel texture/outline + integer scaling on
+  the art layers only.
 
 ## Functional building catalog
 
@@ -44,21 +54,21 @@ UI-D-002.
 
 Status colours are **reserved** — do not reuse Healthy-green for generic UI chrome, so
 state reads cleanly. The current Foundation already uses a compatible status palette
-(`styles.css`); reconcile exact hexes in UI-D-001.
+(`styles.css`); exact hex values remain Proposed and are confirmed during roadmap PR A.
 
-## Typography (Proposed — UI-D-007)
+## Typography (roles Confirmed — UI-D-007; specific fonts Proposed)
 
-| Role | Direction |
-|---|---|
-| Logo | display pixel font (short text only) |
-| HUD numbers | tabular, high-legibility (pixel or clean sans) |
-| Panel headings | medium-weight legible |
-| Body text | **non-pixel** legible sans for long/CJK text |
-| Node IDs / code | monospace |
+| Role | Direction | Status |
+|---|---|---|
+| Logo / large signage / short numeric labels | display **pixel font** | Confirmed |
+| Korean body + HUD text | **legible Sans** (non-pixel) | Confirmed |
+| Node IDs / technical info | **monospace** | Confirmed |
+| Panel headings | medium-weight legible sans | Confirmed |
 
 Do not use a decorative pixel font for long body or CJK text. A font stack must render
 **both Korean and English** (the UI already mixes both). Do **not** commit font files —
-document candidates + license review only (UI-D-007).
+document candidates + license review only (specific file selection is the remaining
+Proposed part of UI-D-007).
 
 ## Icons (Proposed)
 

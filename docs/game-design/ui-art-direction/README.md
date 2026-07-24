@@ -28,17 +28,14 @@ so Program/DevCTO can lock the remaining decisions before any pixel art is produ
 - **TBD** — needs a Program or DevCTO decision (see decisions-required.md).
 - **Deferred** — post-MVP.
 
-Nothing in this package is Confirmed on the basis of a reference image (see the note below).
+## Reference note (resolved)
 
-## Reference image note (important)
-
-The reviewing AI author of these documents **could not view the reference image(s)**. All
-mood/structure analysis here is derived from the **textual description** supplied in the
-task brief. Therefore the final visual genre and any image-derived specifics remain
-**Proposed/TBD** (see **UI-D-001** and **UI-D-015**). Before locking the visual genre,
-the user should attach the image(s) or provide a local path so the direction can be
-confirmed against the actual reference. Reference images are **not** committed to the repo
-(unclear usage rights) — only a textual feature analysis is stored.
+The reference has been reviewed by Program. Its genre is **Illustrated Pixel Hybrid**
+(pixel-styled illustrated buildings/environment + crisp normal UI panels), and the core
+visual decisions are now **Confirmed** — see **UI-D-001** (genre) and **UI-D-002** (tile).
+The reference images themselves are **not committed** to the repo (usage rights;
+**UI-D-015 Confirmed**): only the textual analysis and decision rationale are stored, and
+the original logo / buildings / characters / icons are never reproduced.
 
 ## Non-goals (this task)
 

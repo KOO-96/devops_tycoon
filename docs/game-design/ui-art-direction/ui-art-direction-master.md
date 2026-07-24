@@ -17,12 +17,12 @@ isolated one — instantly, and on a small screen.
 
 | Pillar | Direction | Status |
 |---|---|---|
-| Medium | 2D pixel art, 2.5D isometric projection | Proposed (UI-D-001) |
-| Line/shading | Thick outline or clear light/shadow break per object | Proposed |
+| Medium | **Illustrated Pixel Hybrid** — pixel-illustrated buildings/environment + crisp normal UI panels; 2.5D isometric | **Confirmed (UI-D-001)** |
+| Line/shading | Pixel outline + clear light/shadow break per object | Proposed |
 | Palette | Limited, bright sky/greenery/panels; status colours reserved | Proposed |
 | Silhouette | Each building kind has a unique silhouette | Confirmed principle |
 | Status cues | Colour **+** icon **+** motion/pattern **+** text, always ≥2 non-colour cues | Confirmed principle (a11y) |
-| Scaling | Integer scaling only; avoid blur / non-integer zoom | Proposed |
+| Scaling | 64×32 source art → 128×64 logical tile at **2× integer scale**, nearest-neighbor | **Confirmed (UI-D-002)** |
 
 ## 3. World mapping (Proposed names, Confirmed node kinds)
 
@@ -65,6 +65,19 @@ postgresql, real connections, incident target, request flow.
 **Decorative/facility objects** (mood only, never clickable-as-function): staff characters,
 benches, planters, roads, signage, decorative piping, lab backdrops, vehicles.
 
+## 4.5 Visual density principle (Confirmed)
+
+The reference is decoration-dense; the DevOps Tycoon **Visual MVP prioritizes functional
+clarity over decoration**:
+
+- Functional nodes must read **before** any decoration.
+- Connection lines must never be lost among buildings/roads.
+- The incident target must be immediately identifiable.
+- Characters and signage must not occlude functional nodes (characters are Phase 2).
+- Deliberately keep empty space.
+- Redis vs PostgreSQL must be clearly distinguishable on a small screen.
+- Decoration density expands only in Visual Phase 2.
+
 ## 5. MVP ↔ Future split (summary; full list in visual-implementation-roadmap.md)
 
 - **Visual MVP:** campus background, tile grid, the 4 functional buildings, connection
@@ -90,6 +103,8 @@ Score, campaign gauge, investor rank, Black Friday meter — Future Slots only o
 
 ## 7. Open decisions
 
-All locking decisions are in [decisions-required.md](decisions-required.md) (UI-D-001…015).
-The single most important is **UI-D-001** (final visual genre), which is gated on viewing
-the actual reference image (UI-D-015).
+All decisions are in [decisions-required.md](decisions-required.md) (UI-D-001…015). Genre
+(UI-D-001 = Illustrated Pixel Hybrid) and tile (UI-D-002 = 128×64 logical / 64×32 source /
+2× integer) are **Confirmed**, so implementation is unblocked. Only **UI-D-014** (asset
+production method) and a few tuning items (UI-D-011/012/013 + concrete font selection under
+UI-D-007) remain Proposed.

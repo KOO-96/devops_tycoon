@@ -1,40 +1,43 @@
 # Reference Mood Analysis (no images committed)
 
 Reference images are **not** stored in this repository: usage rights are unconfirmed
-(**UI-D-015**). This file records only a **textual analysis** of the visual mood and
-information structure the reference conveys, used as inspiration — not for reproduction.
+(**UI-D-015 Confirmed** = text-only). This file records only a **textual analysis** of the
+visual mood and information structure the reference conveys, used as inspiration — not for
+reproduction.
 
-> The document author could not view the image(s) directly; this analysis is transcribed
-> from the task brief's textual description. Confirm against the actual reference before
-> locking **UI-D-001** (final visual genre).
+## Genre (Confirmed)
 
-## Mood / structure characteristics (from the brief)
+The reference genre is **Illustrated Pixel Hybrid** (UI-D-001 Confirmed): pixel-styled
+illustrated buildings/characters/environment with pixel outline + texture, plus crisp,
+normal UI panels — not constrained to classic low-res dots.
 
-- Bright, cute pixel-art tycoon style.
-- Central isometric technology campus.
-- Floating-island form over a sky / clouds / mountains backdrop.
-- Left vertical function menu.
-- Top logo + resource HUD.
-- Right-side panel for current tasks and incident alerts.
-- Central Build/Test or Integration facility.
-- Distinct zones: development, server, monitoring, research.
-- Small characters active around the facilities.
-- Buildings, equipment, pipes, cables, servers compose one cohesive campus.
-- Layout where status and function are instantly distinguishable, even on a small screen.
+## Mood / structure characteristics (from the reviewed reference)
+
+- Bright, cute illustrated-pixel tycoon style.
+- Central isometric technology campus on a floating island over sky / clouds / mountains.
+- Left vertical function menu; top logo + resource HUD; right task/alert panel.
+- Central Build/Test / Integration facility; distinct development / server / monitoring /
+  research zones.
+- Small characters active around the facilities; dense buildings, equipment, pipes, cables,
+  servers as one cohesive campus.
+- Status and function are instantly distinguishable, even on a small screen.
 
 ## What we take (inspiration only)
 
-The **mood** (bright, legible, non-threatening) and the **information frame** (top HUD,
-left nav, central board, right context panel) — re-designed for DevOps Tycoon's own world
-and rules.
+The **mood** (bright, legible, non-threatening), the **information frame** (top HUD, left
+nav, central board, right context panel), and the illustrated-pixel look — all re-designed
+for DevOps Tycoon's own world and rules.
 
-## What we must NOT copy
+## What we must NOT copy (UI-D-014 / UI-D-015)
 
 Original logo, characters, exact building shapes, menu icons, precise screen layout, text
-and typography, and any 1:1 arrangement of background/objects. All DevOps Tycoon assets
-are designed fresh (see asset-style-guide.md).
+and typography, and any 1:1 arrangement of background/objects. In particular the reference's
+top Level/Score, right "Current Task", "Research" as active, and its Develop/Integrate menu
+labels are **not** reproduced (no live data / not supported yet). All DevOps Tycoon assets
+are designed fresh and normalized to our specs.
 
-## If images are provided later
+## Density stance
 
-Store them **outside** the repo (or here only if rights are cleared) and update UI-D-015.
-Re-review UI-D-001/002/003 against the real reference; adjust Proposed values as needed.
+The reference is decoration-dense; our Visual MVP prioritizes functional clarity —
+functional nodes, connections, and incident targets read before any decoration. Characters
+and heavy decoration are Phase 2.
