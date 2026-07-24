@@ -83,6 +83,6 @@ describe('GamePage load gating', () => {
 
   it('shows a loading state before ready', () => {
     renderGamePage();
-    expect(screen.getByText('Loading game session…')).toBeInTheDocument();
+    expect(screen.getByText('Loading campus…')).toBeInTheDocument();
   });
 });
