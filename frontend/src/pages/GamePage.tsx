@@ -4,17 +4,8 @@ import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useController } from '../session/controllerContext';
 import { useGameSessionStore } from '../state/gameSessionStore';
-import { Hud } from '../components/hud/Hud';
-import { ControlBar } from '../components/hud/ControlBar';
-import { ConnectionBanner } from '../components/common/ConnectionBanner';
-import { ErrorRegion } from '../components/common/ErrorRegion';
-import { SnapshotSyncBanner } from '../components/common/SnapshotSyncBanner';
 import { SessionErrorScreen } from '../components/common/SessionErrorScreen';
-import { NodeList } from '../components/common/NodeList';
-import { IncidentPanel } from '../components/incidents/IncidentPanel';
-import { NodeInspector } from '../components/commands/NodeInspector';
-import { EventLog } from '../components/events/EventLog';
-import { GameCanvas } from '../game/GameCanvas';
+import { GameLayout } from '../components/layout/GameLayout';
 
 export function GamePage(): JSX.Element {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -56,32 +47,15 @@ export function GamePage(): JSX.Element {
 
   if (loadState !== 'ready') {
     return (
-      <main style={{ maxWidth: 520, margin: '4rem auto', padding: '0 1rem' }} aria-busy="true">
-        <p role="status" aria-live="polite">
-          Loading game session…
-        </p>
-      </main>
+      <div className="state-screen" aria-busy="true">
+        <div className="state-card">
+          <p role="status" aria-live="polite">
+            Loading campus…
+          </p>
+        </div>
+      </div>
     );
   }
 
-  return (
-    <div>
-      <ConnectionBanner />
-      <Hud />
-      <ControlBar />
-      <SnapshotSyncBanner />
-      <ErrorRegion />
-      <div className="game-layout">
-        <div>
-          <GameCanvas />
-        </div>
-        <aside className="sidebar">
-          <NodeInspector />
-          <NodeList />
-          <IncidentPanel />
-          <EventLog />
-        </aside>
-      </div>
-    </div>
-  );
+  return <GameLayout />;
 }

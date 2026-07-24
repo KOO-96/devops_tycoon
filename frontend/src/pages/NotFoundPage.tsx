@@ -2,11 +2,13 @@ import { Link } from 'react-router-dom';
 
 export function NotFoundPage(): JSX.Element {
   return (
-    <main style={{ maxWidth: 480, margin: '4rem auto', padding: '0 1rem' }}>
-      <h1>Not found</h1>
-      <p>
-        <Link to="/">Back to start</Link>
-      </p>
+    <main className="state-screen">
+      <div className="state-card">
+        <h1 style={{ fontSize: 'var(--fs-display)' }}>Page not found</h1>
+        <p style={{ color: 'var(--c-text-secondary)' }}>
+          <Link to="/">Back to start</Link>
+        </p>
+      </div>
     </main>
   );
 }
