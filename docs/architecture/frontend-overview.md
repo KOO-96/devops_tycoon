@@ -42,6 +42,16 @@ React 18, TypeScript strict (`strict`, `noUncheckedIndexedAccess`,
 Vitest 2 + Testing Library. No state library beyond Zustand; Simulation logic is
 never reimplemented client-side.
 
+## Visual layout shell (Visual PR A)
+
+The Illustrated Pixel Hybrid layout shell lives in `src/styles/` (design tokens:
+tokens/reset/global/utilities) and `src/components/layout/` (`AppShell`,
+`GameLayout`, `TopHud`, `LeftNavigation`, `CampusFrame`, `ContextPanel`,
+`CommandBar`) with primitives in `src/components/ui/`. React DOM owns HUD/nav/
+panels/errors; PixiJS owns only the campus canvas (unchanged). Details, landmarks,
+responsive rules, and the command-placement decision are in
+[frontend-layout-shell.md](frontend-layout-shell.md).
+
 ## Quality gates
 
 `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`. The Backend OpenAPI is

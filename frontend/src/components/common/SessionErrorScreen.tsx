@@ -4,6 +4,7 @@
  */
 
 import type { LoadState, UiError } from '../../state/gameSessionStore';
+import { PixelButton } from '../ui/PixelButton';
 
 export interface SessionErrorScreenProps {
   kind: Extract<LoadState, 'not_found' | 'recoverable_error' | 'fatal_error'>;
@@ -44,35 +45,29 @@ export function SessionErrorScreen({
 }: SessionErrorScreenProps): JSX.Element {
   const copy = COPY[kind];
   return (
-    <main
-      role="alert"
-      aria-live="assertive"
-      style={{ maxWidth: 520, margin: '4rem auto', padding: '0 1rem' }}
-    >
-      <h1>{copy.title}</h1>
-      <p>{copy.body}</p>
-      <p style={{ color: '#8a97a8', fontSize: '0.85rem' }}>
-        Session: <code>{shortId(sessionId)}</code>
-        {error?.code ? ` · ${error.code}` : ''}
-      </p>
-      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-        {kind === 'recoverable_error' && onRetry && (
-          <button type="button" onClick={onRetry}>
-            다시 시도
-          </button>
-        )}
-        <button type="button" onClick={onNewGame}>
-          새 게임 시작
-        </button>
-        <button type="button" onClick={onBackToStart}>
-          시작 화면으로 돌아가기
-        </button>
-      </div>
-      {error?.requestId ? (
-        <p style={{ color: '#8a97a8', fontSize: '0.75rem', marginTop: '1rem' }}>
-          Support reference: <code>{error.requestId}</code>
+    <main className="state-screen" role="alert" aria-live="assertive">
+      <div className="state-card">
+        <h1 style={{ fontSize: 'var(--fs-display)' }}>{copy.title}</h1>
+        <p style={{ color: 'var(--c-text-secondary)' }}>{copy.body}</p>
+        <p style={{ color: 'var(--c-text-muted-solid)', fontSize: 'var(--fs-label)' }}>
+          Session: <code>{shortId(sessionId)}</code>
+          {error?.code ? ` · ${error.code}` : ''}
         </p>
-      ) : null}
+        <div className="cluster" style={{ marginTop: 'var(--s-16)' }}>
+          {kind === 'recoverable_error' && onRetry && (
+            <PixelButton onClick={onRetry}>다시 시도</PixelButton>
+          )}
+          <PixelButton variant="primary" onClick={onNewGame}>
+            새 게임 시작
+          </PixelButton>
+          <PixelButton onClick={onBackToStart}>시작 화면으로 돌아가기</PixelButton>
+        </div>
+        {error?.requestId ? (
+          <p style={{ color: 'var(--c-text-muted-solid)', fontSize: 'var(--fs-label)', marginTop: 'var(--s-16)' }}>
+            Support reference: <code>{error.requestId}</code>
+          </p>
+        ) : null}
+      </div>
     </main>
   );
 }

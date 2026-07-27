@@ -1,0 +1,375 @@
+/**
+ * Global styles + layout shell (Visual PR A).
+ * Bright Illustrated-Pixel-Hybrid theme. React DOM owns HUD / nav / panels /
+ * errors; the Pixi canvas owns the campus. No isometric/coordinate/asset changes.
+ */
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  color: var(--c-text-primary);
+  background: var(--c-bg-sky-bottom);
+}
+
+/* App background: bright sky vista behind everything (CSS only, no image). */
+.app-bg {
+  min-height: 100vh;
+  background:
+    radial-gradient(1200px 400px at 50% -120px, #ffffff88, transparent 70%),
+    linear-gradient(180deg, var(--c-bg-sky-top) 0%, var(--c-bg-sky-bottom) 55%, #eef6fb 100%);
+}
+
+/* --- focus + buttons --- */
+button {
+  cursor: pointer;
+}
+button:disabled,
+[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+:where(button, a, [tabindex], input, select):focus-visible {
+  outline: var(--border-thick) solid var(--c-focus);
+  outline-offset: 2px;
+  border-radius: var(--r-button);
+}
+
+/* --- headings with a subtle pixel-style shadow --- */
+.brand,
+.section-title {
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
+}
+.brand {
+  font-size: var(--fs-display);
+  font-weight: 800;
+  color: var(--c-text-primary);
+  text-shadow: 2px 2px 0 #ffffff, 3px 3px 0 var(--c-border-default);
+}
+
+/* --- panels / primitives --- */
+.panel {
+  background: var(--c-surface-primary);
+  border: var(--border-thin) solid var(--c-border-default);
+  border-radius: var(--r-panel);
+  box-shadow: var(--sh-panel);
+  padding: var(--s-12);
+}
+.panel + .panel {
+  margin-top: var(--s-12);
+}
+.panel-header {
+  font-family: var(--font-heading);
+  font-size: var(--fs-heading);
+  font-weight: 700;
+  color: var(--c-text-primary);
+  margin-bottom: var(--s-8);
+  display: flex;
+  align-items: center;
+  gap: var(--s-8);
+}
+.empty-state {
+  color: var(--c-text-muted-solid);
+  font-size: var(--fs-body);
+  padding: var(--s-8) 0;
+}
+.pixel-btn {
+  background: var(--c-surface-elevated);
+  border: var(--border-thin) solid var(--c-border-default);
+  border-bottom-width: var(--border-pixel);
+  border-radius: var(--r-button);
+  padding: var(--s-8) var(--s-12);
+  font-family: var(--font-label);
+  font-weight: 600;
+  color: var(--c-text-primary);
+  transition: background var(--t-fast), transform var(--t-fast);
+}
+.pixel-btn:hover:not(:disabled) {
+  background: var(--c-surface-secondary);
+}
+.pixel-btn:active:not(:disabled) {
+  transform: translateY(1px);
+  border-bottom-width: var(--border-thin);
+}
+.pixel-btn--primary {
+  background: var(--c-interactive);
+  color: var(--c-text-on-accent);
+  border-color: var(--c-interactive-hover);
+}
+.pixel-btn--primary:hover:not(:disabled) {
+  background: var(--c-interactive-hover);
+}
+
+/* --- status badge (colour + text; icon supplied by caller) --- */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-4);
+  padding: 2px var(--s-8);
+  border-radius: var(--r-badge);
+  border: var(--border-thin) solid var(--c-border-default);
+  font-size: var(--fs-label);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.status-badge[data-tone='healthy'] { background: var(--c-healthy-soft); color: var(--c-healthy); border-color: var(--c-healthy); }
+.status-badge[data-tone='warning'] { background: var(--c-warning-soft); color: var(--c-warning); border-color: var(--c-warning); }
+.status-badge[data-tone='critical'] { background: var(--c-critical-soft); color: var(--c-critical); border-color: var(--c-critical); }
+.status-badge[data-tone='down'] { background: var(--c-down-soft); color: var(--c-down); border-color: var(--c-down); border-style: dashed; }
+.status-badge[data-tone='info'] { background: var(--c-info-soft); color: var(--c-info); border-color: var(--c-info); }
+.status-badge[data-tone='muted'] { background: var(--c-surface-secondary); color: var(--c-text-secondary); }
+
+/* --- metric display (label + tabular value) --- */
+.metric {
+  display: flex;
+  flex-direction: column;
+  min-width: 64px;
+}
+.metric dt,
+.metric-label {
+  font-size: var(--fs-label);
+  color: var(--c-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.metric dd,
+.metric-value {
+  margin: 0;
+  font-family: var(--font-metric);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+/* ===== Game shell layout ===== */
+.game-shell {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr) clamp(300px, 24vw, 360px);
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas:
+    'header header header'
+    'nav    campus context'
+    'nav    command context';
+  height: 100vh;
+  gap: var(--s-8);
+  padding: var(--s-8);
+}
+.top-hud { grid-area: header; z-index: var(--z-header); }
+.left-nav { grid-area: nav; z-index: var(--z-side-panel); overflow-y: auto; }
+.campus-frame { grid-area: campus; min-width: 0; min-height: 0; }
+.context-panel { grid-area: context; overflow-y: auto; z-index: var(--z-side-panel); }
+.command-bar { grid-area: command; }
+
+/* --- top hud --- */
+.top-hud {
+  display: flex;
+  align-items: center;
+  gap: var(--s-16);
+  flex-wrap: wrap;
+  background: var(--c-surface-primary);
+  border: var(--border-thin) solid var(--c-border-default);
+  border-radius: var(--r-panel);
+  box-shadow: var(--sh-panel);
+  padding: var(--s-8) var(--s-16);
+}
+.hud-group {
+  display: flex;
+  gap: var(--s-16);
+  align-items: center;
+  padding: 0 var(--s-12);
+  border-right: var(--border-thin) solid var(--c-border-default);
+}
+.hud-group:last-child { border-right: none; }
+
+/* Existing Hud.tsx dl.hud hook, re-themed to a horizontal metric row. */
+.hud {
+  display: flex;
+  gap: var(--s-16);
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 0;
+}
+.hud > div { display: flex; flex-direction: column; min-width: 56px; }
+.hud dt { font-size: var(--fs-label); color: var(--c-text-secondary); text-transform: uppercase; }
+.hud dd { margin: 0; font-family: var(--font-metric); font-variant-numeric: tabular-nums; font-weight: 700; }
+
+/* --- left navigation --- */
+.left-nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  background: var(--c-surface-primary);
+  border: var(--border-thin) solid var(--c-border-default);
+  border-radius: var(--r-panel);
+  box-shadow: var(--sh-panel);
+  padding: var(--s-8);
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-8);
+  width: 100%;
+  text-align: left;
+  padding: var(--s-8);
+  border: var(--border-thin) solid transparent;
+  border-radius: var(--r-button);
+  background: transparent;
+  color: var(--c-text-primary);
+  font-weight: 600;
+}
+.nav-item:hover:not([aria-disabled='true']) { background: var(--c-surface-secondary); }
+.nav-item[aria-current='page'] {
+  background: var(--c-info-soft);
+  border-color: var(--c-interactive);
+  color: var(--c-interactive-hover);
+}
+.nav-item[aria-disabled='true'] { color: var(--c-text-muted-solid); }
+.nav-item .nav-glyph { width: 1.2em; text-align: center; }
+.nav-item .nav-tag {
+  margin-left: auto;
+  font-size: 0.62rem;
+  color: var(--c-text-muted-solid);
+  border: var(--border-thin) solid var(--c-border-default);
+  border-radius: var(--r-badge);
+  padding: 0 var(--s-4);
+}
+
+/* --- campus frame --- */
+.campus-frame {
+  display: flex;
+  flex-direction: column;
+  background: var(--c-surface-primary);
+  border: var(--border-thin) solid var(--c-border-default);
+  border-radius: var(--r-panel);
+  box-shadow: var(--sh-panel);
+  overflow: hidden;
+}
+.campus-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-8);
+  padding: var(--s-8) var(--s-12);
+  border-bottom: var(--border-thin) solid var(--c-border-default);
+  font-family: var(--font-heading);
+  font-weight: 700;
+}
+.campus-canvas-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 300px;
+  background:
+    linear-gradient(180deg, #bfe6ff 0%, #d8eefc 100%);
+}
+/* GameCanvas hook (unchanged component) fills the wrap. */
+.canvas-host {
+  position: absolute;
+  inset: 0;
+}
+.campus-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--s-16);
+  background: rgba(216, 238, 252, 0.72);
+  z-index: var(--z-canvas-overlay);
+  pointer-events: none;
+}
+.campus-overlay .campus-overlay-card {
+  background: var(--c-surface-primary);
+  border: var(--border-thin) solid var(--c-border-default);
+  border-radius: var(--r-panel);
+  box-shadow: var(--sh-elevated);
+  padding: var(--s-16) var(--s-24);
+  pointer-events: auto;
+}
+
+/* --- context panel sections reuse .panel --- */
+.context-panel { display: flex; flex-direction: column; gap: var(--s-12); }
+
+/* --- command bar (global commands live here) --- */
+.command-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--s-8);
+  background: var(--c-surface-primary);
+  border: var(--border-thin) solid var(--c-border-default);
+  border-radius: var(--r-panel);
+  box-shadow: var(--sh-panel);
+  padding: var(--s-8) var(--s-12);
+}
+
+/* ===== banners (re-themed light) ===== */
+.banner {
+  padding: var(--s-8) var(--s-12);
+  font-size: var(--fs-body);
+  border-radius: var(--r-button);
+  border: var(--border-thin) solid var(--c-border-default);
+}
+.banner-ok { background: var(--c-healthy-soft); border-color: var(--c-healthy); color: var(--c-healthy); }
+.banner-warn { background: var(--c-warning-soft); border-color: var(--c-warning); color: var(--c-warning); }
+.banner-error { background: var(--c-critical-soft); border-color: var(--c-critical); color: var(--c-critical); }
+
+/* ===== node list (existing hook, re-themed) ===== */
+.node-list button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  margin: 2px 0;
+  padding: var(--s-4) var(--s-8);
+  background: var(--c-surface-elevated);
+  border: var(--border-thin) solid var(--c-border-default);
+  border-radius: var(--r-button);
+  color: inherit;
+}
+.node-list button[aria-pressed='true'] {
+  border-color: var(--c-selected);
+  box-shadow: var(--sh-selected);
+}
+
+/* ===== status text colours (non-colour cue = the text label itself) ===== */
+.status-Healthy { color: var(--c-healthy); }
+.status-Warning { color: var(--c-warning); }
+.status-Critical { color: var(--c-critical); }
+.status-Down { color: var(--c-down); }
+
+/* ===== start page ===== */
+.start-page {
+  max-width: 520px;
+  margin: 8vh auto;
+  padding: 0 var(--s-16);
+}
+.start-card {
+  background: var(--c-surface-primary);
+  border: var(--border-thin) solid var(--c-border-default);
+  border-radius: var(--r-panel);
+  box-shadow: var(--sh-elevated);
+  padding: var(--s-24);
+}
+
+/* ===== full-screen state (loading / error) card ===== */
+.state-screen {
+  max-width: 560px;
+  margin: 8vh auto;
+  padding: 0 var(--s-16);
+}
+.state-card {
+  background: var(--c-surface-primary);
+  border: var(--border-thin) solid var(--c-border-default);
+  border-radius: var(--r-panel);
+  box-shadow: var(--sh-elevated);
+  padding: var(--s-24);
+}
+
+/* ===== responsive: 1280×720 floor ===== */
+@media (max-width: 1360px) {
+  .game-shell { grid-template-columns: 150px minmax(0, 1fr) clamp(280px, 26vw, 340px); }
+  .nav-item .nav-tag { display: none; }
+}
+@media (max-width: 1180px) {
+  .game-shell { grid-template-columns: 56px minmax(0, 1fr) 300px; }
+  .nav-item .nav-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .top-hud { gap: var(--s-8); }
+}
