@@ -21,7 +21,14 @@ reviewable, and keeps all Foundation tests green.
 | `components/common/SnapshotSyncBanner.tsx` | sync-failure recovery | **Keep** | |
 | `state/*` (Zustand) | UI state | **Keep** | no Pixi objects stored in state (Confirmed) |
 
-## PR A — Visual tokens & layout shell
+## PR A — Visual tokens & layout shell — DELIVERED (agent/frontend)
+
+Implemented: design tokens (`src/styles/`), CSS-grid `GameLayout` (header/nav/
+campus/context/command), left nav with correct enabled/disabled states, styled
+loading/recovery/sync screens, responsive 1440×810→1280×720, accessibility
+(landmarks, skip link, aria-current/disabled, reduced-motion), Pixi/REST/WS
+behavior preserved. See `docs/architecture/frontend-layout-shell.md`. Original
+scope below:
 - **Scope:** design tokens (palette/spacing/typography vars), overall grid layout, top HUD
   frame, left nav (with correct enabled/disabled states), right panel frame, error-screen
   styling.

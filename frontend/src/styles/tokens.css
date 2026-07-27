@@ -1,0 +1,116 @@
+/**
+ * Design tokens — Illustrated Pixel Hybrid (UI-D-001).
+ *
+ * Values are the art-direction Proposed palette (asset-style-guide.md); they are
+ * Proposed, not Confirmed — do not promote to Confirmed without Program approval.
+ * Status colours are RESERVED (never reused for generic chrome) so node/connection
+ * state reads cleanly. No external fonts are installed in PR A (system stacks +
+ * pixel-style shadow/stroke only).
+ */
+
+:root {
+  color-scheme: light;
+
+  /* --- Color: backgrounds / surfaces --- */
+  --c-bg-sky-top: #a6dcff;
+  --c-bg-sky-bottom: #d8eefc;
+  --c-bg-ground: #6fbf73;
+  --c-surface-primary: #ffffff;
+  --c-surface-secondary: #eaf2fb;
+  --c-surface-elevated: #f7fbff;
+  --c-surface-sunken: #dfeaf5;
+
+  /* --- Color: borders / text --- */
+  --c-border-default: #b9cbdd;
+  --c-border-strong: #2c3a47;
+  --c-text-primary: #1b2b3a;
+  --c-text-secondary: #47586a;
+  --c-text-muted: #7488998f;
+  --c-text-muted-solid: #6b7c8d;
+  --c-text-on-accent: #ffffff;
+
+  /* --- Color: interactive --- */
+  --c-interactive: #2f6fed;
+  --c-interactive-hover: #1f57c8;
+  --c-selected: #00b3b3;
+  --c-focus: #2f6fed;
+  --c-info: #3a7bd5;
+
+  /* --- Color: reserved status (do not reuse for chrome) --- */
+  --c-healthy: #1e9e57;
+  --c-warning: #c9820a;
+  --c-critical: #d43f2f;
+  --c-down: #6b5b7b;
+  --c-disabled: #8b98a6;
+
+  --c-healthy-soft: #e4f6ec;
+  --c-warning-soft: #fbf1d8;
+  --c-critical-soft: #fbe3e0;
+  --c-down-soft: #ece8f1;
+  --c-info-soft: #e4eefb;
+
+  /* --- Typography (system stacks; no external fonts in PR A) --- */
+  --font-display: 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif; /* + pixel-style shadow */
+  --font-heading: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-body: system-ui, -apple-system, 'Segoe UI', 'Malgun Gothic', sans-serif;
+  --font-label: system-ui, -apple-system, sans-serif;
+  --font-metric: ui-monospace, 'SF Mono', 'Cascadia Mono', monospace;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', monospace;
+
+  --fs-display: 1.5rem;
+  --fs-heading: 1rem;
+  --fs-body: 0.9rem;
+  --fs-label: 0.7rem;
+  --fs-metric: 1rem;
+
+  /* --- Spacing (4px scale) --- */
+  --s-4: 4px;
+  --s-8: 8px;
+  --s-12: 12px;
+  --s-16: 16px;
+  --s-20: 20px;
+  --s-24: 24px;
+  --s-32: 32px;
+  --s-40: 40px;
+
+  /* --- Shape --- */
+  --r-panel: 10px;
+  --r-button: 8px;
+  --r-badge: 999px;
+  --border-thin: 1px;
+  --border-thick: 2px;
+  --border-pixel: 3px; /* chunky pixel-style edge */
+
+  /* --- Shadow --- */
+  --sh-panel: 0 1px 0 #ffffff inset, 0 2px 6px rgba(28, 43, 58, 0.12);
+  --sh-elevated: 0 6px 18px rgba(28, 43, 58, 0.18);
+  --sh-inset: inset 0 2px 0 rgba(255, 255, 255, 0.7);
+  --sh-selected: 0 0 0 2px var(--c-selected), 0 0 10px rgba(0, 179, 179, 0.5);
+  --sh-incident: 0 0 0 2px var(--c-critical), 0 0 12px rgba(212, 63, 47, 0.4);
+
+  /* --- Z-index --- */
+  --z-canvas: 0;
+  --z-canvas-overlay: 10;
+  --z-side-panel: 20;
+  --z-header: 30;
+  --z-dropdown: 40;
+  --z-alert: 50;
+  --z-modal: 60;
+
+  /* --- Motion --- */
+  --t-fast: 90ms;
+  --t-normal: 180ms;
+  --t-slow: 320ms;
+  --pulse-slow: 1.6s;
+  --pulse-fast: 0.7s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --t-fast: 0ms;
+    --t-normal: 0ms;
+    --t-slow: 0ms;
+    --pulse-slow: 0ms;
+    --pulse-fast: 0ms;
+  }
+}
