@@ -47,12 +47,24 @@ snapshot update removes the selected node (e.g. REMOVE_NODE), the store clears
   event.
 - `recent_event_ids` is a bounded set; the event log is capped.
 
+## Building system + resource ownership (Visual PR B)
+
+The scene now uses explicit layers, footprints, stable depth, `BuildingView`s, and
+an `AssetManager`. Ownership is split (§20): the AssetManager owns shared/generated
+textures + the manifest; the scene owns Sprites/Graphics/Containers/listeners.
+`GameScene.destroy()` destroys the Application `{children:true}` (NOT `texture:true`)
+then calls `AssetManager.dispose()`. `GameCanvas` wraps scene sync in try/catch so a
+render error cannot break the store→React notification chain. FE-ART-003 (final
+shared-atlas lifecycle) is not complete. Full detail:
+[frontend-isometric-building-system.md](frontend-isometric-building-system.md).
+
 ## Testing
 
-`GameScene` is tested with `vi.mock('pixi.js')` (fake Application/Container/
-Graphics/Text) to assert create/sync/select/resize/destroy and listener cleanup
-without WebGL. `GameCanvas` is tested by mocking `createGameScene` to assert
-create-on-mount and destroy-on-unmount.
+`GameScene` is tested with a shared `vi.mock('pixi.js')` fake
+(`tests/helpers/fakePixi.ts`) to assert create/sync/select/resize/destroy, diff
+reuse, and listener cleanup without WebGL. `GameCanvas` is tested by mocking
+`createGameScene` to assert create-on-mount and destroy-on-unmount. Pure modules
+(footprint/depth/manifest/adapter/asset-manager) have standalone unit tests.
 
 ## Deferred
 

@@ -37,7 +37,14 @@ scope below:
 - **Tests:** layout renders per loadState; nav disabled items non-interactive; a11y roles.
 - **Perf risk:** low. **Reviewers:** Program, Frontend.
 
-## PR B — Isometric tile & building system
+## PR B — Isometric tile & building system — DELIVERED (agent/frontend)
+
+Implemented: explicit scene layers, 1×1–4×4 footprints, stable depth sorting,
+anchor/pivot rules, BuildingView + node adapter (unknown-kind safe), Asset Manager
++ manifest + generated fallback, connection/selection views, diff sync (50-node
+verified) — on the unchanged 128×64 grid. FE-ART-002/003 + ASSET-OPS-001/002 remain
+PR C gates. See `docs/architecture/frontend-isometric-building-system.md`. Original
+scope below:
 - **Scope:** tile grid render, camera (pan clamp, keyboard pan), layer split, building
   sprite placement (anchor/footprint), selection bounds.
 - **Assets:** ground/terrain tiles, one placeholder building.

@@ -52,6 +52,15 @@ panels/errors; PixiJS owns only the campus canvas (unchanged). Details, landmark
 responsive rules, and the command-placement decision are in
 [frontend-layout-shell.md](frontend-layout-shell.md).
 
+## Isometric building system (Visual PR B)
+
+`game/pixi/` gains explicit scene layers (`scene/sceneLayers.ts`), a footprint +
+stable depth model (`isometric/footprint.ts`, `isometric/depth.ts`), a
+`BuildingView` + node adapter (`buildings/`), an Asset Manager + manifest +
+generated fallback (`assets/`), and connection/selection views — all on the
+unchanged 128×64 coordinate system. Details:
+[frontend-isometric-building-system.md](frontend-isometric-building-system.md).
+
 ## Quality gates
 
 `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`. The Backend OpenAPI is
