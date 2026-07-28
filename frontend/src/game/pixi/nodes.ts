@@ -80,7 +80,9 @@ export function snapshotToBoardNodes(snapshot: SimulationSnapshot | null): Board
       out.push({
         id: node.id,
         kind: node.kind,
-        health: node.health,
+        // Some node kinds (e.g. load_balancer) omit `health` in the snapshot;
+        // default to Healthy so the board never renders an undefined status.
+        health: node.health ?? 'Healthy',
         enabled: node.enabled,
       });
     }
