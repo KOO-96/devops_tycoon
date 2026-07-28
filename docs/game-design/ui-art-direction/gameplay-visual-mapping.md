@@ -55,6 +55,13 @@ Incidents come from the backend (`active_incidents`: `type`, `target`, `phase`).
 marks the **target** node with an alert overlay; the right panel lists incidents verbatim.
 The Frontend never invents a cause or predicts an outcome (Confirmed boundary).
 
+**Health and incidents are separate.** A node's health badge (or `not_applicable`/
+`not_reported` for kinds like load_balancer that omit health) is independent of any
+incident overlay. A missing health is never rendered as Healthy and is never
+auto-promoted to Critical because an incident exists; conversely an active incident
+is never hidden behind a health badge. Example: a load_balancer shows `Health N/A`
+in its status while simultaneously showing an `LB_IMBALANCE` incident.
+
 ## Functional vs decorative (Confirmed principle)
 
 Only functional objects (the 4 building kinds, real connections, incident targets, request

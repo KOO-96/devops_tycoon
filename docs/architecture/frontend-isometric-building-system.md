@@ -52,9 +52,34 @@ in. Placeholders are marked `DEVELOPMENT_PLACEHOLDER_NOT_FINAL_ART`.
 
 Unknown node kinds map to a safe `unknown` building ("UNKNOWN" label) so the scene
 never breaks (FE-ART-001 partial; full unknown-kind UX stays tracked in FE-ART-001).
-A missing `health` (e.g. the load_balancer snapshot node omits it) defaults to
-Healthy in `snapshotToBoardNodes`, and colour lookups are defensive — no undefined
-colour can reach Pixi.
+
+## Node health vs visual status (single resolver)
+
+`health` is **optional** (`SnapshotNode.health?`) — the snapshot is a free-form
+object and some kinds omit it. `game/nodeStatus.ts` is the **single source of
+truth** that maps a node to a display status; every surface (BuildingView,
+NodeList, NodeInspector, ARIA) uses it, so canvas and DOM never disagree, and a
+missing health is **never shown as Healthy**:
+
+- `enabled === false` → **disabled** (precedence; raw health kept in data).
+- health present + known enum → that health (Healthy/Warning/Critical/Down).
+- health present but unrecognized → **not_reported**.
+- health absent + kind has no health concept (`NODE_HEALTH_CAPABILITY`:
+  load_balancer = `not_applicable`) → **not_applicable** ("Health N/A", neutral
+  blue-grey, glyph `—`).
+- health absent + health-capable kind (app_server/redis/postgresql, or unknown
+  kind defaulting to reported) → **not_reported** ("Status unavailable", neutral
+  grey, glyph `?`).
+
+Neutral states never reuse green/Warning/Critical/Down colours and always carry a
+non-colour glyph + text + ARIA phrase. **Incidents are separate**: a
+`not_applicable` load_balancer can still carry an LB_IMBALANCE / NO_HEALTHY_SERVER
+incident (shown via the incident panel) — a missing health is never turned into
+Critical, and an active incident is never hidden behind a false "Healthy".
+
+Backend decision on whether non-health nodes should emit an explicit
+applicability marker is tracked as **BACK-FU-009** (Proposed; no backend change in
+this PR). FE-ART-002 (full state-data-source matrix) remains **not complete**.
 
 ## Scene diff sync (§27)
 
