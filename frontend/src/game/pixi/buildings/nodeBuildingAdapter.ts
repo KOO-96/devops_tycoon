@@ -28,7 +28,9 @@ export function nodeToBuildingModel(
     gridPosition: { col: position.col, row: position.row },
     footprint: visual.footprint,
     enabled: node.enabled,
-    health: node.health,
+    // Carry health through as-is (may be undefined); the status resolver decides
+    // how a missing value renders — never a default Healthy.
+    ...(node.health != null ? { health: node.health } : {}),
     label: `${visual.label} ${node.id}`,
   };
 }

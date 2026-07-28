@@ -64,7 +64,10 @@ export interface SnapshotNode {
   id: string;
   kind: NodeKind;
   enabled: boolean;
-  health: Health;
+  // Optional: the snapshot is a free-form object and some kinds (load_balancer)
+  // omit health entirely. A missing value is resolved to not_applicable/
+  // not_reported by the status resolver — never defaulted to Healthy.
+  health?: Health;
   cpu_usage?: number;
   mem_usage?: number;
   queue_length?: number;

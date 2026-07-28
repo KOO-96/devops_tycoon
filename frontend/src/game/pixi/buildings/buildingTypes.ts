@@ -17,7 +17,9 @@ export interface BuildingRenderModel {
   gridPosition: { col: number; row: number };
   footprint: TileFootprint;
   enabled: boolean;
-  health: Health;
+  /** Optional — some kinds (load_balancer) omit health; status is resolved from
+   * the kind's capability, never defaulted to Healthy. */
+  health?: Health;
   label: string;
 }
 
@@ -49,16 +51,5 @@ export function kindVisual(kind: NodeKind | 'unknown'): KindVisual {
   return KIND_VISUAL[kind] ?? UNKNOWN_VISUAL;
 }
 
-export const HEALTH_COLOR: Record<Health, number> = {
-  Healthy: 0x1e9e57,
-  Warning: 0xc9820a,
-  Critical: 0xd43f2f,
-  Down: 0x6b5b7b,
-};
-
-export const HEALTH_PATTERN: Record<Health, 'solid' | 'dashed' | 'double' | 'hatched'> = {
-  Healthy: 'solid',
-  Warning: 'dashed',
-  Critical: 'double',
-  Down: 'hatched',
-};
+// Health colour/pattern now live in the shared status resolver
+// (`game/nodeStatus.ts`) so canvas and DOM share one source of truth.

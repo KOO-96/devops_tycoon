@@ -14,12 +14,8 @@ import { HALF_TILE_HEIGHT, HALF_TILE_WIDTH } from '../isometric/coordinates';
 import { selectionPolygon } from '../isometric/footprint';
 import { depthZIndex } from '../isometric/depth';
 import { gridToScreen } from '../isometric/coordinates';
-import {
-  HEALTH_COLOR,
-  HEALTH_PATTERN,
-  kindVisual,
-  type BuildingRenderModel,
-} from './buildingTypes';
+import { kindVisual, type BuildingRenderModel } from './buildingTypes';
+import { resolveNodeVisualStatus, statusAppearance } from '../../nodeStatus';
 
 export class BuildingView {
   readonly container: Container;
@@ -99,14 +95,18 @@ export class BuildingView {
     const baseY = (fp.width + fp.height) * HALF_TILE_HEIGHT * 0.5;
     const bw = HALF_TILE_WIDTH * Math.min(fp.width, 2) * 0.7;
     const bh = 26 + 8 * Math.max(fp.width, fp.height);
-    const fill = this.model.enabled ? kv.baseColor : 0x8b98a6;
-    // Defensive: an unexpected/missing health must never yield an undefined
-    // colour (Pixi throws). Fall back to the Healthy tokens.
-    const health = HEALTH_COLOR[this.model.health] ?? HEALTH_COLOR.Healthy;
-    const pattern = this.model.enabled
-      ? (HEALTH_PATTERN[this.model.health] ?? 'solid')
-      : 'dashed';
-    const border = selected ? 0x00b3b3 : health;
+    // Body fill = kind colour (grey when disabled). The health/status border +
+    // pattern come from the single status resolver, so a missing health renders
+    // a neutral N/A or unavailable border — NEVER a false green Healthy.
+    const status = resolveNodeVisualStatus({
+      kind: this.model.nodeKind,
+      enabled: this.model.enabled,
+      health: this.model.health,
+    });
+    const appearance = statusAppearance(status);
+    const fill = status.kind === 'disabled' ? 0x8b98a6 : kv.baseColor;
+    const pattern = appearance.pattern;
+    const border = selected ? 0x00b3b3 : appearance.color;
     const borderW = selected ? 3 : pattern === 'double' ? 3 : pattern === 'solid' ? 2 : 1;
 
     this.body.clear();
@@ -120,7 +120,8 @@ export class BuildingView {
       this.body.rect(cx - bw / 2 + 3 + i * 5, baseY - bh + 3, 3, 3).fill({ color: border });
     }
 
-    this.label.text = `${kv.glyph} ${this.model.label}`;
+    // Status glyph (— / ? / ! / ✔) is a non-colour cue alongside the label.
+    this.label.text = `${kv.glyph} ${appearance.glyph} ${this.model.label}`;
     this.label.position.set(cx - bw / 2, baseY - bh - 14);
   }
 }
