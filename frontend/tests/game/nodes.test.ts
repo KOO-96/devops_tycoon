@@ -36,4 +36,15 @@ describe('node visuals', () => {
   it('returns an empty list for a null snapshot', () => {
     expect(snapshotToBoardNodes(null)).toEqual([]);
   });
+
+  it('defaults a missing health (e.g. load_balancer) to Healthy (no undefined)', () => {
+    const snapshot = makeSnapshot({
+      app_servers: {},
+      // load_balancer snapshot node has no `health` field (backend to_dict omits it).
+      load_balancers: { 'lb-1': { id: 'lb-1', kind: 'load_balancer', enabled: true } as never },
+    });
+    const nodes = snapshotToBoardNodes(snapshot);
+    const lb = nodes.find((n) => n.id === 'lb-1');
+    expect(lb?.health).toBe('Healthy');
+  });
 });
