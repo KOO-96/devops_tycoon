@@ -1,67 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Mock Pixi so no real WebGL/canvas is needed. Everything the mock factory
-// references must be created inside vi.hoisted (the factory is hoisted).
-const h = vi.hoisted(() => {
-  class FakeContainer {
-    children: FakeContainer[] = [];
-    position = { set: vi.fn(), x: 0, y: 0 };
-    eventMode = '';
-    cursor = '';
-    hitArea: unknown = null;
-    handlers: Record<string, Array<(e: unknown) => void>> = {};
-    addChild<T extends FakeContainer>(c: T): T {
-      this.children.push(c);
-      return c;
-    }
-    removeChildren(): FakeContainer[] {
-      const c = this.children;
-      this.children = [];
-      return c;
-    }
-    destroy(): void {}
-    on(ev: string, cb: (e: unknown) => void): this {
-      (this.handlers[ev] ??= []).push(cb);
-      return this;
-    }
-  }
-  class FakeGraphics extends FakeContainer {
-    clear(): this { return this; }
-    moveTo(): this { return this; }
-    lineTo(): this { return this; }
-    fill(): this { return this; }
-    stroke(): this { return this; }
-  }
-  class FakeText extends FakeContainer {
-    text = '';
-  }
-  const appInstances: FakeApplication[] = [];
-  class FakeApplication {
-    stage = new FakeContainer();
-    renderer = { width: 800, height: 600 };
-    canvas = document.createElement('canvas');
-    init = vi.fn().mockResolvedValue(undefined);
-    destroy = vi.fn();
-    constructor() {
-      appInstances.push(this);
-    }
-  }
-  return { FakeContainer, FakeGraphics, FakeText, FakeApplication, appInstances };
-});
+vi.mock('pixi.js', async () => await import('../helpers/fakePixi'));
 
-const appInstances = h.appInstances as unknown as Array<{
-  stage: { children: Array<{ children: Array<{ children: Array<{ handlers: Record<string, Array<(e: unknown) => void>> }> }> }> };
-  init: ReturnType<typeof vi.fn>;
-  destroy: ReturnType<typeof vi.fn>;
-}>;
-
-vi.mock('pixi.js', () => ({
-  Application: h.FakeApplication,
-  Container: h.FakeContainer,
-  Graphics: h.FakeGraphics,
-  Text: h.FakeText,
-}));
-
+import { appInstances, findHandler, type Container } from '../helpers/fakePixi';
 import { GameScene } from '../../src/game/pixi/createGameScene';
 
 describe('GameScene lifecycle', () => {
@@ -97,12 +38,9 @@ describe('GameScene lifecycle', () => {
     const onSelect = vi.fn();
     const scene = await GameScene.create(document.createElement('div'), { onSelect });
     scene.sync([{ id: 'app', kind: 'app_server', health: 'Healthy', enabled: true }], []);
-    // Fire the sprite pointertap handler captured by the fake container.
-    const nodeSprite = appInstances[0]!.stage.children
-      .flatMap((world) => world.children)
-      .flatMap((layer) => layer.children)
-      .find((c) => c.handlers['pointertap']);
-    nodeSprite?.handlers['pointertap']?.[0]?.({ stopPropagation: vi.fn() });
+    const stage = appInstances[0]!.stage as unknown as Container;
+    const building = findHandler(stage, 'pointertap');
+    building?.handlers['pointertap']?.[0]?.({ stopPropagation: vi.fn() });
     expect(onSelect).toHaveBeenCalledWith('app');
     scene.destroy();
   });
@@ -122,5 +60,37 @@ describe('GameScene lifecycle', () => {
     const scene = await GameScene.create(document.createElement('div'));
     scene.destroy();
     expect(() => scene.sync([], [])).not.toThrow();
+  });
+
+  it('reuses building views across syncs and removes only gone nodes', async () => {
+    const scene = await GameScene.create(document.createElement('div'));
+    const stage = appInstances[0]!.stage as unknown as Container;
+    const countBuildings = (): number => {
+      let n = 0;
+      const walk = (c: Container): void => {
+        if (c.label.startsWith('building:')) n++;
+        c.children.forEach(walk);
+      };
+      walk(stage);
+      return n;
+    };
+    scene.sync(
+      [
+        { id: 'a', kind: 'app_server', health: 'Healthy', enabled: true },
+        { id: 'b', kind: 'redis', health: 'Healthy', enabled: true },
+      ],
+      [],
+    );
+    expect(countBuildings()).toBe(2);
+    // Re-sync with one removed, one kept, one added.
+    scene.sync(
+      [
+        { id: 'b', kind: 'redis', health: 'Warning', enabled: true },
+        { id: 'c', kind: 'postgresql', health: 'Healthy', enabled: true },
+      ],
+      [],
+    );
+    expect(countBuildings()).toBe(2); // a destroyed, c created, b reused
+    scene.destroy();
   });
 });

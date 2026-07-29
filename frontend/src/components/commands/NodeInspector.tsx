@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { useController } from '../../session/controllerContext';
 import { useGameSessionStore } from '../../state/gameSessionStore';
 import type { NodeKind, SnapshotNode } from '../../api/schemas';
+import { nodeStatusAppearance } from '../../game/nodeStatus';
 
 function findNode(store: ReturnType<typeof useGameSessionStore.getState>, id: string | null): SnapshotNode | null {
   if (id === null || store.snapshot === null) return null;
@@ -76,8 +77,15 @@ export function NodeInspector(): JSX.Element {
       ) : (
         <div>
           <p>
-            <strong>{node.id}</strong> — {node.kind} · <span className={`status-${node.health}`}>{node.health}</span>
-            {!node.enabled && ' · disabled'}
+            <strong>{node.id}</strong> — {node.kind} ·{' '}
+            {(() => {
+              const a = nodeStatusAppearance({ kind: node.kind, enabled: node.enabled, health: node.health });
+              return (
+                <span className={`status-${a.toneKey}`} aria-label={a.ariaText}>
+                  {a.glyph} {a.shortText}
+                </span>
+              );
+            })()}
           </p>
           <dl style={{ fontSize: '0.8rem' }}>
             {typeof node.cpu_usage === 'number' && (

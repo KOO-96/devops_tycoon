@@ -334,6 +334,10 @@ button:disabled,
 .status-Warning { color: var(--c-warning); }
 .status-Critical { color: var(--c-critical); }
 .status-Down { color: var(--c-down); }
+/* Neutral, non-green states — a missing health is never shown as Healthy. */
+.status-Disabled { color: var(--c-disabled); }
+.status-NotApplicable { color: var(--c-text-secondary); }
+.status-NotReported { color: var(--c-text-muted-solid); }
 
 /* ===== start page ===== */
 .start-page {

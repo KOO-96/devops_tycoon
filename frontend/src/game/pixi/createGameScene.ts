@@ -1,37 +1,52 @@
 /**
- * PixiJS isometric scene (§18). Encapsulates the Pixi `Application`, a pannable
- * world container, node sprites, and selection. All the pure geometry/visual
- * logic lives in `isometric.ts`/`nodes.ts`; this file only wires Pixi.
+ * PixiJS isometric scene. Wires the Pixi `Application`, a pannable world
+ * container, the explicit scene layers, and incremental building/connection/
+ * selection sync. Pure geometry/visual logic lives in `isometric/`, `buildings/`,
+ * `assets/`; this file only orchestrates Pixi.
  *
- * Lifecycle contract (§26): `destroy()` removes the window resize listener,
- * destroys the Pixi `Application` (and its children/textures), and drops all
- * references. `create()` is the only place Pixi is instantiated, so tests can
- * `vi.mock('pixi.js')`.
+ * Public API is unchanged (`create`/`sync`/`setSelection`/`resize`/`destroy`) so
+ * GameCanvas and existing tests keep working. PR B adds:
+ *   - explicit layers (SceneLayers)
+ *   - footprint + stable depth sorting (BuildingView on a sortable layer)
+ *   - node→BuildingRenderModel adapter (unknown-kind safe)
+ *   - AssetManager + generated fallback (ownership seam; FE-ART-003 not final)
+ *   - diff sync (reuse existing views; create new / destroy gone only)
+ *
+ * The 128×64 coordinate system (`gridToScreen`/`layoutGrid`) is unchanged.
  */
 
-import { Application, Container, Graphics, Text } from 'pixi.js';
+import { Application, Container } from 'pixi.js';
 import type { FederatedPointerEvent } from 'pixi.js';
-import { DEFAULT_TILE, gridToScreen, layoutGrid } from './isometric';
-import { nodeVisual, type BoardNode } from './nodes';
+import { layoutGrid } from './isometric';
+import { gridToScreen } from './isometric/coordinates';
+import type { BoardNode } from './nodes';
+import { SceneLayers } from './scene/sceneLayers';
+import { isDebugEnabled, renderDebug } from './scene/debugOverlay';
+import { BuildingView } from './buildings/BuildingView';
+import { nodeToBuildingModel } from './buildings/nodeBuildingAdapter';
+import type { BuildingRenderModel } from './buildings/buildingTypes';
+import { ConnectionView } from './connections/ConnectionView';
+import { SelectionView } from './selection/SelectionView';
+import { AssetManager } from './assets/AssetManager';
 
 export interface GameSceneOptions {
   background?: number;
   onSelect?: (nodeId: string | null) => void;
-}
-
-interface NodeSprite {
-  container: Container;
-  redraw: (node: BoardNode, selected: boolean) => void;
+  debug?: boolean;
 }
 
 export class GameScene {
   private readonly app: Application;
   private readonly world: Container;
-  private readonly edgeLayer: Container;
-  private readonly nodeLayer: Container;
-  private readonly sprites = new Map<string, NodeSprite>();
+  private readonly layers: SceneLayers;
+  private readonly assets: AssetManager;
+  private readonly connections: ConnectionView;
+  private readonly selectionView: SelectionView;
+  private readonly buildings = new Map<string, BuildingView>();
+  private readonly models = new Map<string, BuildingRenderModel>();
   private readonly onSelect: ((nodeId: string | null) => void) | undefined;
   private readonly handleResize = (): void => this.recenter();
+  private readonly debugEnabled: boolean;
 
   private selectedId: string | null = null;
   private destroyed = false;
@@ -41,12 +56,14 @@ export class GameScene {
   private constructor(app: Application, options: GameSceneOptions) {
     this.app = app;
     this.onSelect = options.onSelect;
+    this.debugEnabled = options.debug ?? isDebugEnabled();
     this.world = new Container();
-    this.edgeLayer = new Container();
-    this.nodeLayer = new Container();
-    this.world.addChild(this.edgeLayer);
-    this.world.addChild(this.nodeLayer);
     this.app.stage.addChild(this.world);
+    this.layers = new SceneLayers(this.world, this.debugEnabled);
+    this.assets = new AssetManager();
+    void this.assets.preload();
+    this.connections = new ConnectionView(this.layers.get('connections'));
+    this.selectionView = new SelectionView(this.layers.get('selection'));
 
     // Background panning: drag empty space to move the camera.
     this.app.stage.eventMode = 'static';
@@ -71,42 +88,53 @@ export class GameScene {
     return new GameScene(app, options);
   }
 
-  /** Reconcile the board with a node list + connections (add/update/remove). */
+  /**
+   * Incrementally reconcile the board with a node list + connections. Reuses
+   * existing BuildingViews (update in place), creates only new nodes, destroys
+   * only removed nodes (§27). Depth is set per building; the buildings layer
+   * sorts on change, not every frame.
+   */
   sync(nodes: BoardNode[], connections: Array<[string, string]>): void {
     if (this.destroyed) return;
     const layout = layoutGrid(nodes.map((n) => n.id));
     const present = new Set(nodes.map((n) => n.id));
+    const buildingLayer = this.layers.get('buildings');
 
-    for (const [id, sprite] of this.sprites) {
+    // Remove gone.
+    for (const [id, view] of this.buildings) {
       if (!present.has(id)) {
-        sprite.container.destroy({ children: true });
-        this.sprites.delete(id);
+        view.destroy();
+        this.buildings.delete(id);
+        this.models.delete(id);
       }
     }
 
+    // Add / update.
     for (const node of nodes) {
       const pos = layout.get(node.id) ?? { x: 0, y: 0 };
-      const screen = gridToScreen(pos.x, pos.y);
-      let sprite = this.sprites.get(node.id);
-      if (!sprite) {
-        sprite = this.createNodeSprite(node.id);
-        this.sprites.set(node.id, sprite);
-        this.nodeLayer.addChild(sprite.container);
+      const model = nodeToBuildingModel(node, { col: pos.x, row: pos.y });
+      this.models.set(node.id, model);
+      const selected = node.id === this.selectedId;
+      let view = this.buildings.get(node.id);
+      if (!view) {
+        view = new BuildingView(model, (nodeId) => this.select(nodeId));
+        this.buildings.set(node.id, view);
+        buildingLayer.addChild(view.container);
+      } else {
+        view.update(model, selected);
       }
-      sprite.container.position.set(screen.x, screen.y);
-      sprite.redraw(node, node.id === this.selectedId);
+      view.setSelected(selected);
     }
 
-    this.drawEdges(connections);
+    this.connections.sync(connections, (id) => this.positionOf(id));
+    this.updateSelectionRing();
+    if (this.debugEnabled) renderDebug(this.layers.get('debug'), [...this.models.values()]);
   }
 
   setSelection(nodeId: string | null): void {
     this.selectedId = nodeId;
-    for (const [id, sprite] of this.sprites) {
-      // Redraw only the border/selection ring; cheap enough for MVP sizes.
-      const node = (sprite.container as Container & { _node?: BoardNode })._node;
-      if (node) sprite.redraw(node, id === nodeId);
-    }
+    for (const [id, view] of this.buildings) view.setSelected(id === nodeId);
+    this.updateSelectionRing();
   }
 
   resize(): void {
@@ -118,60 +146,31 @@ export class GameScene {
     if (this.destroyed) return;
     this.destroyed = true;
     window.removeEventListener('resize', this.handleResize);
-    this.sprites.clear();
-    // Destroys stage children, listeners, and GPU resources.
-    this.app.destroy(true, { children: true, texture: true });
+    for (const v of this.buildings.values()) v.destroy();
+    this.buildings.clear();
+    this.models.clear();
+    this.connections.destroy();
+    this.selectionView.destroy();
+    // Scene owns Sprites/Graphics/Containers/listeners → destroy with children.
+    // Do NOT blanket-destroy textures here: shared/generated textures are owned by
+    // the AssetManager and released via its own dispose() (§20, FE-ART-003 seam).
+    this.app.destroy(true, { children: true });
+    this.assets.dispose();
   }
 
   // -- internals -------------------------------------------------------------
 
-  private createNodeSprite(id: string): NodeSprite {
-    const c = new Container() as Container & { _node?: BoardNode };
-    c.eventMode = 'static';
-    c.cursor = 'pointer';
-    const g = new Graphics();
-    const label = new Text({
-      text: '',
-      style: { fill: 0xffffff, fontSize: 12, fontFamily: 'monospace' },
-    });
-    label.position.set(-DEFAULT_TILE.width / 4, -8);
-    c.addChild(g);
-    c.addChild(label);
-    c.on('pointertap', (e: FederatedPointerEvent) => {
-      e.stopPropagation();
-      this.select(id);
-    });
-
-    const redraw = (node: BoardNode, selected: boolean): void => {
-      c._node = node;
-      const v = nodeVisual(node);
-      const w = DEFAULT_TILE.width / 2;
-      const h = DEFAULT_TILE.height;
-      g.clear();
-      // Isometric diamond.
-      g.moveTo(0, -h / 2)
-        .lineTo(w, 0)
-        .lineTo(0, h / 2)
-        .lineTo(-w, 0)
-        .lineTo(0, -h / 2)
-        .fill({ color: v.color })
-        .stroke({ color: selected ? 0xffffff : v.border, width: selected ? 3 : 1 });
-      label.text = `${v.glyph} ${v.label}`;
-    };
-
-    return { container: c, redraw };
+  private positionOf(nodeId: string): { x: number; y: number } | undefined {
+    const m = this.models.get(nodeId);
+    if (!m) return undefined;
+    return gridToScreen(m.gridPosition.col, m.gridPosition.row);
   }
 
-  private drawEdges(connections: Array<[string, string]>): void {
-    this.edgeLayer.removeChildren().forEach((child) => child.destroy());
-    const g = new Graphics();
-    for (const [src, dst] of connections) {
-      const a = this.sprites.get(src)?.container.position;
-      const b = this.sprites.get(dst)?.container.position;
-      if (!a || !b) continue;
-      g.moveTo(a.x, a.y).lineTo(b.x, b.y).stroke({ color: 0x5a6470, width: 2 });
-    }
-    this.edgeLayer.addChild(g);
+  private updateSelectionRing(): void {
+    const m = this.selectedId ? this.models.get(this.selectedId) : undefined;
+    this.selectionView.show(
+      m ? { col: m.gridPosition.col, row: m.gridPosition.row, footprint: m.footprint } : null,
+    );
   }
 
   private select(nodeId: string | null): void {

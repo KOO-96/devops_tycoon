@@ -8,6 +8,20 @@ import { useEffect, useRef } from 'react';
 import { GameScene } from './pixi/createGameScene';
 import { snapshotToBoardNodes } from './pixi/nodes';
 import { useGameSessionStore } from '../state/gameSessionStore';
+import type { SimulationSnapshot } from '../api/schemas';
+
+/** Sync the scene from a snapshot, isolating any Pixi render error so it can
+ * never break the zustand notification chain (which would block React's own
+ * store-subscribed re-render). Errors are logged, not thrown (§24). */
+function syncScene(scene: GameScene, snapshot: SimulationSnapshot | null, selectedNodeId: string | null): void {
+  try {
+    scene.sync(snapshotToBoardNodes(snapshot), snapshot?.connections ?? []);
+    scene.setSelection(selectedNodeId);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    if (import.meta.env.DEV) console.error('[GameCanvas] scene sync failed:', err);
+  }
+}
 
 export function GameCanvas(): JSX.Element {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -27,16 +41,14 @@ export function GameCanvas(): JSX.Element {
       sceneRef.current = scene;
       // Prime with current store state.
       const { snapshot, selectedNodeId } = useGameSessionStore.getState();
-      scene.sync(snapshotToBoardNodes(snapshot), snapshot?.connections ?? []);
-      scene.setSelection(selectedNodeId);
+      syncScene(scene, snapshot, selectedNodeId);
     });
 
     // Keep the scene in sync with store changes.
     const unsub = useGameSessionStore.subscribe((state) => {
       const scene = sceneRef.current;
       if (scene === null) return;
-      scene.sync(snapshotToBoardNodes(state.snapshot), state.snapshot?.connections ?? []);
-      scene.setSelection(state.selectedNodeId);
+      syncScene(scene, state.snapshot, state.selectedNodeId);
     });
 
     return () => {
