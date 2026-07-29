@@ -20,6 +20,25 @@ canvas-alternative NodeList (Confirmed accessibility principle).
 Deploying/Disabled are UI states derived from commands/enabled flag, not part of the core
 4-level health enum.
 
+## Health applicability — not_applicable / not_reported (Confirmed policy)
+
+`health` is optional in the snapshot; a missing value is **never** shown as Healthy.
+The single resolver (`game/nodeStatus.ts`) maps it by node-kind capability:
+
+| Situation | State | Colour (neutral) | Glyph | Text |
+|---|---|---|---|---|
+| kind has no health concept (load_balancer) | not_applicable | blue-grey (not green) | `—` | Health N/A |
+| health-capable kind but value missing (app/redis/db) | not_reported | grey (not green) | `?` | Status unavailable |
+
+Neutral states never reuse Healthy/Warning/Critical/Down colours, always carry a
+non-colour glyph + text, and are distinguished for screen readers ("health status
+not applicable" vs "…unavailable"). Missing health is never auto-promoted to
+Warning/Critical. Incidents are shown separately from health (an LB with
+`not_applicable` health can still show LB_IMBALANCE / NO_HEALTHY_SERVER).
+
+Backend applicability marker = **BACK-FU-009** (Proposed). FE-ART-002 (full
+state-data-source matrix) remains not complete.
+
 ## Per-node-kind state variants (Confirmed states; art Proposed)
 
 - **Load Balancer:** Healthy · Imbalanced · No-Healthy-Server · Down.
