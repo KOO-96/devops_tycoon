@@ -77,14 +77,20 @@ export function buildDevelopmentManifest(version = 'dev-1'): AssetManifest {
   });
   return {
     manifestVersion: version,
+    // Kind entries carry no per-entry fallback → the building category fallback
+    // (tier 2) resolves them to the unknown building, then universal (tier 3).
     assets: [
-      entry(NODE_BUILDING_ASSET_ID.load_balancer, UNKNOWN_BUILDING_ASSET_ID),
-      entry(NODE_BUILDING_ASSET_ID.app_server, UNKNOWN_BUILDING_ASSET_ID),
-      entry(NODE_BUILDING_ASSET_ID.redis, UNKNOWN_BUILDING_ASSET_ID),
-      entry(NODE_BUILDING_ASSET_ID.postgresql, UNKNOWN_BUILDING_ASSET_ID),
+      entry(NODE_BUILDING_ASSET_ID.load_balancer),
+      entry(NODE_BUILDING_ASSET_ID.app_server),
+      entry(NODE_BUILDING_ASSET_ID.redis),
+      entry(NODE_BUILDING_ASSET_ID.postgresql),
       entry(UNKNOWN_BUILDING_ASSET_ID, UNIVERSAL_FALLBACK_ASSET_ID),
       entry(UNIVERSAL_FALLBACK_ASSET_ID),
     ],
+    categoryFallbacks: {
+      building: UNKNOWN_BUILDING_ASSET_ID,
+      fallback: UNIVERSAL_FALLBACK_ASSET_ID,
+    },
   };
 }
 

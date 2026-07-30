@@ -4,6 +4,7 @@
  */
 
 import type { AssetCategory, AssetManifest, AssetManifestEntry, AssetSourceType } from './assetTypes';
+import { isValidChecksum } from './assetLoader';
 
 const CATEGORIES: ReadonlySet<AssetCategory> = new Set([
   'building',
@@ -38,6 +39,8 @@ function validateEntry(e: AssetManifestEntry, problems: ManifestProblem[]): void
     problems.push({ assetId: id, code: 'BAD_ANCHOR', message: 'anchor x/y must be 0..1' });
   if (e.footprint && (!inFootprint(e.footprint.width) || !inFootprint(e.footprint.height)))
     problems.push({ assetId: id, code: 'BAD_FOOTPRINT', message: 'footprint w/h must be 1..4' });
+  if (e.checksum !== undefined && !isValidChecksum(e.checksum))
+    problems.push({ assetId: id, code: 'BAD_CHECKSUM', message: 'checksum must be 64-hex sha256' });
 }
 
 function inRange01(n: number): boolean {
@@ -86,6 +89,18 @@ export function validateManifest(manifest: AssetManifest): ManifestProblem[] {
       seen.add(cur.assetId);
       cur = byId.get(cur.fallbackAssetId);
     }
+  }
+
+  // Category fallbacks (tier 2): valid category key + the target must exist.
+  for (const [category, targetId] of Object.entries(manifest.categoryFallbacks ?? {})) {
+    if (!CATEGORIES.has(category as AssetCategory))
+      problems.push({ assetId: null, code: 'BAD_CATEGORY_FALLBACK_KEY', message: `invalid category fallback key ${category}` });
+    if (typeof targetId !== 'string' || !byId.has(targetId))
+      problems.push({
+        assetId: targetId ?? null,
+        code: 'MISSING_CATEGORY_FALLBACK',
+        message: `category fallback ${String(targetId)} for ${category} not found`,
+      });
   }
   return problems;
 }

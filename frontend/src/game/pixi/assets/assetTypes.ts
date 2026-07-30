@@ -37,6 +37,13 @@ export interface AssetManifestEntry {
 export interface AssetManifest {
   manifestVersion: string;
   assets: AssetManifestEntry[];
+  /**
+   * Per-category default fallback asset ids (FE-ART-003 §8 tier 2). Used when a
+   * requested asset (and its own `fallbackAssetId`) cannot be resolved, before the
+   * universal generated fallback. Defined once at the manifest level — never
+   * hardcoded per component.
+   */
+  categoryFallbacks?: Partial<Record<AssetCategory, string>>;
 }
 
 /** Manager-level coarse load state (kept for backward compatibility). */
