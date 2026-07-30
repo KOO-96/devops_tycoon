@@ -5,7 +5,12 @@ vi.mock('pixi.js', async () => await import('../helpers/fakePixi'));
 import type { Texture as PixiTexture } from 'pixi.js';
 import { Texture } from '../helpers/fakePixi';
 import { AssetManager, type AssetHandle } from '../../src/game/pixi/assets/AssetManager';
-import { AssetLoadError, type AssetLoader, type AssetLoadContext } from '../../src/game/pixi/assets/assetLoader';
+import {
+  AssetLoadError,
+  type AssetLoader,
+  type AssetLoadContext,
+  type LoadedAsset,
+} from '../../src/game/pixi/assets/assetLoader';
 import type { AssetManifestEntry } from '../../src/game/pixi/assets/assetTypes';
 import {
   NODE_BUILDING_ASSET_ID,
@@ -22,9 +27,9 @@ const backoffOnly = (ms: number): Promise<void> =>
 /** Loader that returns a fresh fake texture, counting loads per assetId. */
 class CountingLoader implements AssetLoader {
   loads = new Map<string, number>();
-  load(entry: AssetManifestEntry): Promise<PixiTexture> {
+  load(entry: AssetManifestEntry): Promise<LoadedAsset> {
     this.loads.set(entry.assetId, (this.loads.get(entry.assetId) ?? 0) + 1);
-    return Promise.resolve(fakeTex());
+    return Promise.resolve({ texture: fakeTex() });
   }
 }
 
@@ -32,10 +37,10 @@ class CountingLoader implements AssetLoader {
 class FlakyLoader implements AssetLoader {
   calls = 0;
   constructor(private failTimes: number, private err: AssetLoadError) {}
-  load(_entry: AssetManifestEntry, _ctx: AssetLoadContext): Promise<PixiTexture> {
+  load(_entry: AssetManifestEntry, _ctx: AssetLoadContext): Promise<LoadedAsset> {
     this.calls += 1;
     if (this.calls <= this.failTimes) return Promise.reject(this.err);
-    return Promise.resolve(fakeTex());
+    return Promise.resolve({ texture: fakeTex() });
   }
 }
 
@@ -44,10 +49,10 @@ class FlakyLoader implements AssetLoader {
 class TargetedFailLoader implements AssetLoader {
   attempts = new Map<string, number>();
   constructor(private failId: string, private err: AssetLoadError) {}
-  load(entry: AssetManifestEntry): Promise<PixiTexture> {
+  load(entry: AssetManifestEntry): Promise<LoadedAsset> {
     this.attempts.set(entry.assetId, (this.attempts.get(entry.assetId) ?? 0) + 1);
     if (entry.assetId === this.failId) return Promise.reject(this.err);
-    return Promise.resolve(fakeTex());
+    return Promise.resolve({ texture: fakeTex() });
   }
 }
 
@@ -212,18 +217,18 @@ describe('AssetManager dispose / race', () => {
   });
 
   it('a load completing after dispose does not register and destroys its texture', async () => {
-    let resolveLoad: (t: PixiTexture) => void = () => {};
+    let resolveLoad: (t: LoadedAsset) => void = () => {};
     const destroyed = vi.fn();
     const loader: AssetLoader = {
       load: () =>
-        new Promise<PixiTexture>((resolve) => {
+        new Promise<LoadedAsset>((resolve) => {
           resolveLoad = resolve;
         }),
     };
     const m = makeManager(loader);
     const acquiring = m.acquire(NODE_BUILDING_ASSET_ID.redis);
     const disposing = m.disposeAll();
-    resolveLoad({ destroy: destroyed } as unknown as PixiTexture); // completes after dispose began
+    resolveLoad({ texture: { destroy: destroyed } as unknown as PixiTexture }); // completes after dispose began
     await Promise.all([acquiring, disposing]);
     managers.length = 0;
     expect(destroyed).toHaveBeenCalled();

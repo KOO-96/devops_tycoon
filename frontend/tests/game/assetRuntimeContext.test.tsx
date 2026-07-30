@@ -1,3 +1,4 @@
+import { StrictMode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from '@testing-library/react';
 
@@ -47,5 +48,24 @@ describe('AssetRuntimeProvider', () => {
     let seen: AssetManager | null = null;
     render(<Probe onManager={(m) => (seen = m)} />);
     expect(seen).toBeNull();
+  });
+
+  it('uninjected under StrictMode yields a usable committed manager', async () => {
+    const seen: Array<AssetManager | null> = [];
+    const { unmount } = render(
+      <StrictMode>
+        <AssetRuntimeProvider>
+          <Probe onManager={(m) => seen.push(m)} />
+        </AssetRuntimeProvider>
+      </StrictMode>,
+    );
+    const live = seen[seen.length - 1];
+    expect(live).toBeInstanceOf(AssetManager);
+    if (live) managers.push(live);
+    // The committed manager is live (not disposed) and usable.
+    const h = await live!.acquire('building.redis.dev');
+    expect(h.texture).not.toBeNull();
+    h.release();
+    unmount();
   });
 });
