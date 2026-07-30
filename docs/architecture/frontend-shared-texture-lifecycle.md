@@ -1,7 +1,9 @@
 # Shared Texture Lifecycle Policy (FE-ART-003)
 
-- Owner: Frontend Architecture · Status: **FE-ART-003: REVIEW_PENDING**
-- Base: dev `65adf13`. Documentation only — no runtime implementation change.
+- Owner: Frontend Architecture · Status: **FE-ART-003 Policy: APPROVED_WITH_FOLLOW_UP**
+- Runtime implementation (Visual PR C): **IMPLEMENTED_PENDING_REVIEW** — see
+  [`frontend-asset-runtime.md`](./frontend-asset-runtime.md) (FU-001..004). This
+  document remains the policy of record; the runtime doc records what was built.
 
 Defines creation / acquire / release / destroy / version-swap ownership for shared
 textures, atlases, and scene resources, so PR C can load real atlases without
