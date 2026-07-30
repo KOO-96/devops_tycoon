@@ -52,6 +52,10 @@ scope below:
 - **Perf risk:** medium (layer count). **Reviewers:** Frontend, Ops.
 
 ## PR C — Functional node visuals
+- **Prerequisite policies (DevCTO APPROVED_WITH_FOLLOW_UP, on dev):** FE-ART-002,
+  FE-ART-003, ASSET-OPS-001/002 + Manifest Baseline. Start/Completion/First-Production-Asset
+  gates and POLICY-C-FU-001…010 are indexed in
+  [`visual-pr-c-policy-gates.md`](./visual-pr-c-policy-gates.md).
 - **Scope:** the 4 building kinds + state variants + connection lines (add/remove) driven by
   the snapshot.
 - **Assets:** building atlases (all health/kind states).
