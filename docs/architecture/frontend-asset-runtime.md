@@ -46,12 +46,50 @@
   `approval` / `decode`. Abort stops everything.
 - After retries exhaust → the bounded fallback chain (below).
 
-## Fallback chain (§8)
+## Fallback chain (§8) — three tiers
 
-Priority: entry `fallbackAssetId` → (implicit) universal fallback. Depth ≤ 3, cycles
-guarded (a repeated id short-circuits to the terminal generated fallback, which never
-fails). A fallback handle is flagged `fallback: true`. Fallback ≠ node Down; an asset
-error is distinct from a backend error.
+Ordered by the ORIGINAL request (linear, not per-entry recursive):
+
+1. **primary** — the requested `assetId`
+2. **entry** — the primary's `fallbackAssetId`
+3. **category** — `manifest.categoryFallbacks[primary.category]` (defined once at the
+   manifest level; never hardcoded per component)
+4. **universal** — the generated universal fallback (terminal, never fails)
+
+`resolveTiered()` in `AssetManager` is the single resolver; `BuildingView` never
+decides fallback order. Each tier uses the same acquire/load/cache/handle policy; a
+non-primary tier flags the handle `fallback: true`, and `lastTierOf(assetId)` exposes
+the tier used (diagnostics/tests).
+
+**Depth & cycles:** at most **3 fallback hops** (primary excluded); a 4th hop is
+never entered. Because the sequence is built from the original request only, a
+duplicate candidate id (e.g. category fallback == primary, or entry == category) is
+loaded **at most once** (`tried` set) and cannot form a cycle. Manifest validation
+also rejects entry-fallback cycles (`FALLBACK_CYCLE`) and missing/invalid category
+fallbacks (`MISSING_CATEGORY_FALLBACK` / `BAD_CATEGORY_FALLBACK_KEY`). Fallback ≠ node
+Down; an asset error is distinct from a backend error.
+
+## Checksum verification + bounded integrity refetch (POLICY-C-FU-005)
+
+The loader returns `LoadedAsset { texture, computedChecksum? }`. When a manifest entry
+declares a `checksum`, the manager compares it (case/prefix-insensitive via
+`normalizeChecksum`) against the loaded `computedChecksum`:
+
+- **match** (or no declared checksum) → accept.
+- **declared but no computed value** → treated as a mismatch (cannot verify → not
+  accepted).
+- **mismatch** → destroy the corrupt texture, then perform **exactly one** integrity
+  refetch (`mode: 'integrity_refetch'`, `bypassCache: true`) — NOT part of the
+  transient retry loop. A second mismatch throws `checksum_mismatch` → the fallback
+  chain. A network/decode error on the refetch goes straight to fallback (no retry).
+
+**Attempt bound:** normal load = 1 + ≤2 transient retries (3); integrity refetch = 1
+→ **≤ 4 total network attempts**. Concurrent consumers of the same key share one load
+promise and therefore **one** integrity refetch. A checksum verified while the manager
+is being disposed discards the texture and never registers it. `ChecksumVerifier`
+(`WebCryptoChecksumVerifier`) is the SHA-256 boundary a real loader uses; internal
+checksums are never surfaced to the UI. Generated development assets declare no
+checksum, so verification is skipped for them.
 
 ## Manifest replacement + rollback (§15)
 
@@ -77,6 +115,21 @@ version differs are marked `stale` (existing handles keep working), the registry
   Production has no HMR reset path.
 - Tests inject their own `AssetManager` (fake loader + injected `sleep`, so retry
   backoff never waits real time) and `disposeAll()` on teardown.
+
+## Scene-local manager guard (§19)
+
+Production injects the app-scoped manager via `AssetRuntimeProvider`. An uninjected
+`GameScene` **throws in production** and **warns once in dev**; a scene-owned local
+manager is only created with the explicit `allowLocalAssetManagerForTests` option
+(tests/legacy harnesses). No silent per-route manager creation.
+
+## Known dev-only limitation (follow-up)
+
+Under React StrictMode with **no** `import.meta.hot` data channel (an unusual dev/
+preview config; vite dev always provides one), an uninjected provider's first
+transient manager is not disposed on the StrictMode remount — the committed manager is
+live and correct, but the first is dev-only garbage. Vite dev (HMR slot) and
+production (single mount) are unaffected. Tracked as a non-blocking follow-up.
 
 ## Not in this PR
 

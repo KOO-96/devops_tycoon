@@ -40,6 +40,13 @@ Handle + refCount + versioned cache · FU-003 HMR/test reset · FU-004 concurren
 dispose-race handling. Pending review; PR C **Completion Gate** still requires the
 implementation verification listed below.
 
+Review-round-2 fixes (REQUEST_CHANGES → addressed): **three-tier fallback**
+(Entry → **Category** → Universal, depth ≤ 3, cycle-guarded) and **checksum
+verification with a single bounded integrity refetch** (≤ 4 total attempts) are now
+implemented, plus a production fail-fast on an uninjected AssetManager and a
+StrictMode provider test. Live-browser (real WebGL) re-verification remains
+OUTSTANDING for Ops sign-off.
+
 ## Gates
 
 **PR C Start Gate** — open once these three policy PRs reach `dev`:
