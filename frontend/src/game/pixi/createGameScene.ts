@@ -38,11 +38,19 @@ export interface GameSceneOptions {
   debug?: boolean;
   /**
    * App-scoped AssetManager (FE-ART-003). When provided, the scene uses it and
-   * NEVER disposes it — shared textures survive scene destroy. When omitted (older
-   * callers/tests), the scene creates and owns a local manager for convenience.
+   * NEVER disposes it — shared textures survive scene destroy. Production MUST inject
+   * it (via AssetRuntimeProvider); a missing manager is a fail-fast in production.
    */
   assets?: AssetManager;
+  /**
+   * Explicit opt-in for a scene-OWNED local AssetManager (tests / isolated harnesses
+   * only). Without this, an uninjected scene warns in dev and throws in production —
+   * so a missing provider can never silently create a per-route manager.
+   */
+  allowLocalAssetManagerForTests?: boolean;
 }
+
+let warnedLocalManager = false;
 
 export class GameScene {
   private readonly app: Application;
@@ -73,9 +81,24 @@ export class GameScene {
     this.app.stage.addChild(this.world);
     this.layers = new SceneLayers(this.world, this.debugEnabled);
     // Injected app-scoped manager is shared and NOT disposed by this scene.
-    this.assets = options.assets ?? new AssetManager();
-    this.ownsAssets = options.assets === undefined;
-    if (this.ownsAssets) void this.assets.preload();
+    if (options.assets) {
+      this.assets = options.assets;
+      this.ownsAssets = false;
+    } else {
+      if (import.meta.env.PROD && !options.allowLocalAssetManagerForTests) {
+        throw new Error(
+          '[GameScene] AssetManager must be injected in production (wrap the app in AssetRuntimeProvider).',
+        );
+      }
+      if (!options.allowLocalAssetManagerForTests && import.meta.env.DEV && !warnedLocalManager) {
+        warnedLocalManager = true;
+        // eslint-disable-next-line no-console
+        console.warn('[GameScene] no AssetManager injected — creating a scene-local one (tests/dev only).');
+      }
+      this.assets = new AssetManager();
+      this.ownsAssets = true;
+      void this.assets.preload();
+    }
     this.connections = new ConnectionView(this.layers.get('connections'));
     this.selectionView = new SelectionView(this.layers.get('selection'));
 

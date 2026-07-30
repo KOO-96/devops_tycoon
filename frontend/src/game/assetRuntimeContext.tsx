@@ -20,9 +20,9 @@ interface HmrSlot {
 }
 function hmrSlot(): HmrSlot | null {
   if (!import.meta.env.DEV) return null;
-  const hot = (import.meta as unknown as { hot?: { data: Record<string, unknown> } }).hot;
-  if (!hot) return null;
-  const data = hot.data;
+  const hot = (import.meta as unknown as { hot?: { data?: Record<string, unknown> } }).hot;
+  const data = hot?.data;
+  if (!data) return null; // no HMR data channel (e.g. test runner) → no slot
   if (!data.assetRuntime) data.assetRuntime = { manager: null } satisfies HmrSlot;
   return data.assetRuntime as HmrSlot;
 }
