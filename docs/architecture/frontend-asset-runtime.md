@@ -131,6 +131,16 @@ transient manager is not disposed on the StrictMode remount — the committed ma
 live and correct, but the first is dev-only garbage. Vite dev (HMR slot) and
 production (single mount) are unaffected. Tracked as a non-blocking follow-up.
 
+## Real-browser verification
+
+The fallback/checksum/race paths run in real Chromium/WebGL2 via a test-only harness
+(`frontend/tests/browser/asset-runtime/`, `pnpm test:browser:asset-runtime`) that
+injects a `ControlledAssetLoader` through the AssetManager's public `loader` DI — no
+production hook, excluded from the production bundle. A full-app smoke
+(`pnpm test:browser:visual-c`) covers single-canvas/single-socket, 54 nodes, route×10,
+and both viewports against the real app. See
+[`../operations/visual-pr-c-live-verification.md`](../operations/visual-pr-c-live-verification.md).
+
 ## Not in this PR
 
 No final sprites/atlases, no EVENT_DERIVED effects, no request-flow particles, no

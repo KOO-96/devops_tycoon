@@ -44,8 +44,14 @@ Review-round-2 fixes (REQUEST_CHANGES → addressed): **three-tier fallback**
 (Entry → **Category** → Universal, depth ≤ 3, cycle-guarded) and **checksum
 verification with a single bounded integrity refetch** (≤ 4 total attempts) are now
 implemented, plus a production fail-fast on an uninjected AssetManager and a
-StrictMode provider test. Live-browser (real WebGL) re-verification remains
-OUTSTANDING for Ops sign-off.
+StrictMode provider test.
+
+Round-3 Ops enablement: **live-browser verification is VERIFIED** — test-only
+harnesses run the fallback/checksum/race paths (10/10) and a full-app lifecycle smoke
+(5/5) in real Chromium/WebGL2 (SwiftShader), backend on PostgreSQL 16.14 + Redis 7.4.9.
+See [`../../operations/visual-pr-c-live-verification.md`](../../operations/visual-pr-c-live-verification.md).
+Harnesses are excluded from the production bundle; ASSET-OPS-004 stays
+IMPLEMENTATION_PENDING (no CI added).
 
 ## Gates
 
