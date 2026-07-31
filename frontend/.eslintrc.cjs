@@ -20,6 +20,9 @@ module.exports = {
     '.eslintrc.cjs',
     'vite.config.ts',
     'vitest.config.ts',
+    'playwright.asset-runtime.config.ts',
+    'playwright.visual-pr-c.config.ts',
+    'tests/browser/asset-runtime/vite.config.ts',
   ],
   rules: {
     'react-hooks/rules-of-hooks': 'error',
