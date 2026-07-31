@@ -53,6 +53,13 @@ See [`../../operations/visual-pr-c-live-verification.md`](../../operations/visua
 Harnesses are excluded from the production bundle; ASSET-OPS-004 stays
 IMPLEMENTATION_PENDING (no CI added).
 
+Round-4 socket re-verify: the earlier "2 dev game sockets" REQUEST_CHANGES was a
+**measurement artifact** — the instrumentation counted Vite's dev HMR socket. Measured
+by `readyState`/URL, the **game socket is 1 in both dev and preview**. The counter now
+filters to the game path. A genuine (narrow) teardown-before-connect orphan-socket race
+was found and fixed in `GameSessionController` (generation-safe teardown + guarded
+connect/handlers), covered by `tests/session/controllerLifecycle.test.ts`.
+
 ## Gates
 
 **PR C Start Gate** — open once these three policy PRs reach `dev`:

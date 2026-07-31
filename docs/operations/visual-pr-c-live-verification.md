@@ -78,19 +78,38 @@ VISUAL_C_BASE_URL=http://localhost:4173 pnpm test:browser:visual-c
 > committed) forwarding `/api`, `/internal`, `/ws` to `:8000`, or serve `dist/` behind
 > any reverse proxy. Production deployment wiring is out of scope for this PR.
 
-**Observed (production preview, this run):** 5/5 PASS, 0 console/page/WebGL errors:
-- **bootstrap** — exactly **1 canvas**, **≤1 game WebSocket**.
+**Observed (dev AND production preview, this run):** 5/5 PASS on both, 0 console/page/WebGL
+errors (game-socket counter excludes Vite HMR):
+- **bootstrap** — exactly **1 canvas**, **1 game WebSocket** (dev and preview).
 - **54 functional nodes** (26 app_server + 14 redis + 14 postgresql) — still **1 canvas**;
   `app-0` … `db-13` present in the accessible node list.
 - **route round-trips ×10** (Start↔Game) — **1 canvas**, WebSocket **≤1** (no leak).
 - **1440×810** and **1280×720** — board + node list usable, 1 canvas, no errors.
 
-### Dev vs production socket count (important)
-On the **Vite dev server** the bootstrap/round-trip socket count is **2**, because React
-**StrictMode double-invokes** effects in dev (the session controller connects twice; one
-is a dev-only transient). On the **production preview** build (React production mode, no
-StrictMode double-invoke) the count is **1** — the true invariant. Always run the socket
-assertions against the production preview.
+### Dev vs production socket count — CORRECTED (measurement artifact)
+An earlier review reported "2 concurrent game sockets in dev" and filed REQUEST_CHANGES.
+That was a **measurement artifact**: the instrumentation wrapped the global
+`window.WebSocket` and counted **Vite's dev-server HMR socket**
+(`ws://host/?token=…`) alongside the game socket. Measuring the actual `readyState`s
+and URLs shows:
+
+- **Dev**: 2 open sockets = **1 game socket** (`/ws/v1/game-sessions/…`) + **1 Vite HMR
+  socket** (`/?token=…`, dev-only).
+- **Production preview**: **1 game socket**, no HMR socket.
+
+So the **game socket count is 1 in both dev and preview** — there was never a
+game-socket StrictMode leak. The instrumentation (`full-app/instrumentation.ts`) now
+counts **only** game sockets (URL contains `/ws/v1/game-sessions`); `wsOpen` excludes
+the HMR socket, and the smoke passes against both dev and preview.
+
+### Genuine hardening found while investigating (kept)
+The investigation did surface a real, narrow lifecycle race: the old
+`GameSessionController.teardown()` did **not** invalidate an in-flight bootstrap, so
+tearing down *before* the initial load reached `connectSocket` (e.g. navigating away
+during load) would open an **orphan game socket after unmount**. Fixed: `teardown()`
+now bumps the lifecycle generation and aborts the in-flight bootstrap; `connectSocket`
+is generation-guarded; socket handlers guard on generation + socket identity. Covered
+by `tests/session/controllerLifecycle.test.ts` (one case fails on the pre-fix code).
 
 ## Not covered live (honest scope)
 - **AssetManager-instance and texture counts** in the full app are not observable
