@@ -6,10 +6,14 @@
  * Kept framework-free (no React) so it is unit-testable; React pages call it and
  * subscribe to the stores.
  *
- * A monotonic `generation` token guards every async result: a late reply from a
- * previous session or a superseded bootstrap is discarded and never written to
- * the store (§5). All entry paths — new game, direct URL, reload, session switch,
- * retry — go through the single `bootstrapSession` flow (§2).
+ * A monotonic lifecycle `generation` token guards every async result: a late reply
+ * from a previous session or a superseded bootstrap is discarded and never written
+ * to the store, and — critically — never opens a socket (§5). `teardown()` BUMPS the
+ * generation and aborts the in-flight bootstrap, so a React StrictMode
+ * mount→unmount→remount (which fires bootstrap → teardown → bootstrap) can never
+ * leave two live sockets: the first bootstrap is invalidated before it connects, and
+ * if it already connected, teardown closed it. All entry paths — new game, direct
+ * URL, reload, session switch, retry — go through the single `bootstrapSession` flow.
  */
 
 import { HttpClient, type FetchLike } from '../api/client';
@@ -43,6 +47,7 @@ export class GameSessionController {
   private socket: GameSessionSocket | null = null;
   private pollTimer: number | null = null;
   private generation = 0;
+  private bootstrapAbort: AbortController | null = null;
   private readonly intents = new Map<string, IntentRecord>();
 
   constructor(config: ControllerConfig) {
@@ -73,28 +78,31 @@ export class GameSessionController {
    * summary + snapshot + event replay, connects the socket, and starts polling.
    */
   async bootstrapSession(sessionId: string): Promise<void> {
-    this.teardown(); // stop prior socket / polling (§4)
-    const gen = ++this.generation;
+    this.teardown(); // stop prior socket / polling AND bump generation + abort (§4)
+    const gen = this.generation; // this bootstrap owns the post-teardown generation
+    const abort = new AbortController();
+    this.bootstrapAbort = abort;
     this.game.beginLoad(sessionId, gen); // full store reset + loading state (§4)
     this.conn.reset();
     try {
       const summary = await this.withBackend(() => getSummary(this.http, sessionId));
-      if (!this.isCurrent(sessionId, gen)) return;
+      if (!this.isCurrent(sessionId, gen, abort.signal)) return;
       const snapshot = await this.withBackend(() => getSnapshot(this.http, sessionId));
-      if (!this.isCurrent(sessionId, gen)) return;
+      if (!this.isCurrent(sessionId, gen, abort.signal)) return;
       // Snapshot is the source of truth for the board; summary is the HUD projection.
       this.game.setSnapshot(snapshot);
       this.game.setSummary(summary);
       const events = await this.withBackend(() =>
         drainEvents(this.http, sessionId, this.game.lastProcessedCursor),
       );
-      if (!this.isCurrent(sessionId, gen)) return;
+      if (!this.isCurrent(sessionId, gen, abort.signal)) return;
       this.game.applyEvents(events);
-      this.connectSocket(sessionId);
+      this.connectSocket(sessionId, gen); // guarded: a stale generation opens no socket
+      if (!this.isCurrent(sessionId, gen, abort.signal)) return;
       this.game.setLoadState('ready');
       this.startPolling(sessionId, gen);
     } catch (err) {
-      if (!this.isCurrent(sessionId, gen)) return;
+      if (!this.isCurrent(sessionId, gen, abort.signal)) return;
       this.mapLoadError(err);
     }
   }
@@ -235,27 +243,38 @@ export class GameSessionController {
     }
   }
 
-  private connectSocket(sessionId: string): void {
+  private connectSocket(sessionId: string, gen: number): void {
+    // A superseded bootstrap (StrictMode remount / session switch) must NOT open a
+    // socket. Re-check the generation right before creating the socket.
+    if (!this.isCurrent(sessionId, gen)) return;
     this.socket?.close();
+    // `live` gates every handler on BOTH the generation and the socket identity, so a
+    // stale socket's late event can never write to the store or null a newer socket.
+    const isLive = (): boolean => this.generation === gen && this.socket === socket;
     const socket = new GameSessionSocket({
       baseWsUrl: this.config.baseWsUrl,
       sessionId,
       createWebSocket: this.config.createWebSocket,
       initialCursor: this.game.lastProcessedCursor,
       handlers: {
-        onStatusChange: (status) => this.conn.setSocketStatus(status),
-        onSessionState: (payload) => this.game.setSummary(payload as never),
+        onStatusChange: (status) => {
+          if (isLive()) this.conn.setSocketStatus(status);
+        },
+        onSessionState: (payload) => {
+          if (isLive()) this.game.setSummary(payload as never);
+        },
         onDomainEvent: (event) => {
-          this.game.applyEvent(event);
+          if (isLive()) this.game.applyEvent(event);
         },
         onError: (payload) => {
+          if (!isLive()) return;
           const code = typeof payload['code'] === 'string' ? payload['code'] : 'INTERNAL_ERROR';
           const message =
             typeof payload['message'] === 'string' ? payload['message'] : 'Socket error.';
           this.game.setError({ code: code as ErrorCode, message, requestId: '' });
         },
         onProtocolMismatch: (version) => {
-          this.conn.setProtocolError(`Unsupported protocol_version ${version}`);
+          if (isLive()) this.conn.setProtocolError(`Unsupported protocol_version ${version}`);
         },
       },
     });
@@ -271,9 +290,15 @@ export class GameSessionController {
     }, SUMMARY_POLL_MS);
   }
 
-  /** Stop all side effects (socket + polling). Store cleanup is done by beginLoad
-   * on the next bootstrap; error states call this to guarantee no live socket. */
+  /** Stop all side effects (socket + polling) and INVALIDATE any in-flight bootstrap.
+   * Bumping the generation + aborting means a superseded bootstrap resolving later
+   * discards its result and opens no socket (§4). Idempotent: safe to call repeatedly;
+   * a no-op teardown still advances the generation, which harmlessly invalidates any
+   * pending async work. Store cleanup is done by beginLoad on the next bootstrap. */
   teardown(): void {
+    this.generation += 1;
+    this.bootstrapAbort?.abort();
+    this.bootstrapAbort = null;
     this.socket?.close();
     this.socket = null;
     if (this.pollTimer !== null) {
@@ -308,7 +333,8 @@ export class GameSessionController {
     });
   }
 
-  private isCurrent(sessionId: string, gen: number): boolean {
+  private isCurrent(sessionId: string, gen: number, signal?: AbortSignal): boolean {
+    if (signal?.aborted === true) return false;
     return this.generation === gen && this.game.sessionId === sessionId;
   }
 
