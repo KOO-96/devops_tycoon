@@ -1,6 +1,6 @@
 # Frontend Asset Runtime (Visual PR C implementation)
 
-- Owner: Frontend · Status: **FE-ART-003 Runtime: IMPLEMENTED_PENDING_REVIEW**
+- Owner: Frontend · Status: **FE-ART-003 Runtime: IMPLEMENTED_IN_DEV** (Visual PR C merged to dev)
 - Implements FE-ART-003-FU-001..004 against the FE-ART-003 policy
   (`frontend-shared-texture-lifecycle.md`). No final production sprites/atlases —
   only code-generated DEVELOPMENT assets + a universal fallback.

@@ -1,7 +1,7 @@
 # Shared Texture Lifecycle Policy (FE-ART-003)
 
 - Owner: Frontend Architecture · Status: **FE-ART-003 Policy: APPROVED_WITH_FOLLOW_UP**
-- Runtime implementation (Visual PR C): **IMPLEMENTED_PENDING_REVIEW** — see
+- Runtime implementation (Visual PR C): **IMPLEMENTED_IN_DEV** — see
   [`frontend-asset-runtime.md`](./frontend-asset-runtime.md) (FU-001..004). This
   document remains the policy of record; the runtime doc records what was built.
 
