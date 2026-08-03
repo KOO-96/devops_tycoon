@@ -3,6 +3,11 @@
 - Version: v0.1.0 · Status: Draft (for review/devcto)
 - Foundation for building/tile/layer/footprint/depth/asset rendering. **No final
   sprites or state variants** — placeholders only.
+- **Visual PR C update:** `BuildingView` now acquires a reference-counted
+  `AssetHandle` from the injected app-scoped `AssetManager` and renders a generated
+  DEVELOPMENT `Sprite`, with the status border/glyph and the incident badge drawn as
+  a SEPARATE overlay (health, selection, incident, and texture are independent). See
+  [`frontend-asset-runtime.md`](./frontend-asset-runtime.md).
 
 ## Coordinate system (unchanged, UI-D-002)
 

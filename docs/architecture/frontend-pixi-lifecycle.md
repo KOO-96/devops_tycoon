@@ -66,6 +66,29 @@ reuse, and listener cleanup without WebGL. `GameCanvas` is tested by mocking
 `createGameScene` to assert create-on-mount and destroy-on-unmount. Pure modules
 (footprint/depth/manifest/adapter/asset-manager) have standalone unit tests.
 
+## Session bootstrap generation-safety (StrictMode / fast-nav)
+
+`GamePage` runs `controller.bootstrapSession(sessionId)` in an effect with a
+`teardown()` cleanup. Because bootstrap is async, `GameSessionController` uses a
+monotonic **lifecycle generation** to stay idempotent under React StrictMode
+mount→unmount→remount and fast route/session switches:
+
+- `bootstrapSession()` calls `teardown()` first, then owns the post-teardown
+  generation and a fresh `AbortController`.
+- `teardown()` **bumps the generation** and **aborts** the in-flight bootstrap, so a
+  superseded bootstrap resolving later discards its result and opens no socket.
+  (Pre-fix, tearing down *before* the initial load connected would open an orphan
+  socket after unmount.)
+- `connectSocket()` re-checks the generation before creating the socket; every socket
+  handler guards on `generation` + socket **identity**, so a stale socket's late event
+  can neither write the store nor null a newer socket.
+
+Invariant: **at most one live game socket** across StrictMode and rapid A→B→A session
+switches. Note: on the Vite **dev** server the browser also opens a separate **HMR**
+WebSocket — instrumentation must filter to the game path (`/ws/v1/game-sessions`), or
+it will falsely read as two game sockets. Covered by
+`tests/session/controllerLifecycle.test.ts`.
+
 ## Deferred
 
 Real art assets, building/flow animations, camera zoom, and fine-grained live

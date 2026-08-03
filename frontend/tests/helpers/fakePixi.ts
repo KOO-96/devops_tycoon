@@ -25,6 +25,11 @@ export class Container {
     this.children.push(c);
     return c;
   }
+  addChildAt<T extends Container>(c: T, index: number): T {
+    c.parent = this;
+    this.children.splice(index, 0, c);
+    return c;
+  }
   removeChildren(): Container[] {
     const c = this.children;
     c.forEach((child) => (child.parent = null));
@@ -55,6 +60,8 @@ export class Graphics extends Container {
   lineTo(): this { return this; }
   poly(): this { return this; }
   rect(): this { return this; }
+  circle(): this { return this; }
+  ellipse(): this { return this; }
   fill(): this { return this; }
   stroke(): this { return this; }
 }
@@ -69,9 +76,24 @@ export class Text extends Container {
   }
 }
 
+export interface FakeTexture {
+  destroy: (value?: boolean) => void;
+}
+
 export const Texture = {
-  from: vi.fn(() => ({ destroy: vi.fn() })),
+  from: vi.fn((): FakeTexture => ({ destroy: vi.fn() })),
 };
+
+export class Sprite extends Container {
+  texture: unknown;
+  width = 0;
+  height = 0;
+  anchor = { _x: 0, _y: 0, set(x: number, y: number) { this._x = x; this._y = y; } };
+  constructor(texture?: unknown) {
+    super();
+    this.texture = texture ?? null;
+  }
+}
 
 export const appInstances: Application[] = [];
 export class Application {
