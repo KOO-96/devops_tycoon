@@ -51,7 +51,13 @@ scope below:
 - **Tests:** grid↔screen, selection hit-area, single canvas, teardown cleanup.
 - **Perf risk:** medium (layer count). **Reviewers:** Frontend, Ops.
 
-## PR C — Functional node visuals
+## PR C — Functional node visuals — COMPLETE_IN_DEV
+- **Status: COMPLETE_IN_DEV** (asset runtime, handles/versioned cache, Entry→Category→
+  Universal fallback, checksum integrity refetch, incident overlay, client source
+  classes, generation-safe session bootstrap; Ops live-browser VERIFIED). Merged to
+  `dev` via PR #21 → review/devcto and PR #22 → dev. Development placeholder assets
+  only — **no final sprites/atlases**; EVENT_DERIVED effects and first-production-asset
+  gates remain open.
 - **Prerequisite policies (DevCTO APPROVED_WITH_FOLLOW_UP, on dev):** FE-ART-002,
   FE-ART-003, ASSET-OPS-001/002 + Manifest Baseline. Start/Completion/First-Production-Asset
   gates and POLICY-C-FU-001…010 are indexed in
