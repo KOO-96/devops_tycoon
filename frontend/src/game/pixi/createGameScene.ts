@@ -28,27 +28,47 @@ import type { BuildingRenderModel } from './buildings/buildingTypes';
 import { ConnectionView } from './connections/ConnectionView';
 import { SelectionView } from './selection/SelectionView';
 import { AssetManager } from './assets/AssetManager';
+import { developmentAssetIdForKind } from './assets/generatedBuildingAsset';
+import { incidentsForTarget, type IncidentViewModel } from '../incidentModel';
+import type { IncidentSummary } from '../../api/schemas';
 
 export interface GameSceneOptions {
   background?: number;
   onSelect?: (nodeId: string | null) => void;
   debug?: boolean;
+  /**
+   * App-scoped AssetManager (FE-ART-003). When provided, the scene uses it and
+   * NEVER disposes it — shared textures survive scene destroy. Production MUST inject
+   * it (via AssetRuntimeProvider); a missing manager is a fail-fast in production.
+   */
+  assets?: AssetManager;
+  /**
+   * Explicit opt-in for a scene-OWNED local AssetManager (tests / isolated harnesses
+   * only). Without this, an uninjected scene warns in dev and throws in production —
+   * so a missing provider can never silently create a per-route manager.
+   */
+  allowLocalAssetManagerForTests?: boolean;
 }
+
+let warnedLocalManager = false;
 
 export class GameScene {
   private readonly app: Application;
   private readonly world: Container;
   private readonly layers: SceneLayers;
   private readonly assets: AssetManager;
+  private readonly ownsAssets: boolean;
   private readonly connections: ConnectionView;
   private readonly selectionView: SelectionView;
   private readonly buildings = new Map<string, BuildingView>();
   private readonly models = new Map<string, BuildingRenderModel>();
+  private readonly viewAssetId = new Map<string, string>();
   private readonly onSelect: ((nodeId: string | null) => void) | undefined;
   private readonly handleResize = (): void => this.recenter();
   private readonly debugEnabled: boolean;
 
   private selectedId: string | null = null;
+  private incidents: readonly IncidentSummary[] = [];
   private destroyed = false;
   private dragging = false;
   private dragStart = { x: 0, y: 0, wx: 0, wy: 0 };
@@ -60,8 +80,25 @@ export class GameScene {
     this.world = new Container();
     this.app.stage.addChild(this.world);
     this.layers = new SceneLayers(this.world, this.debugEnabled);
-    this.assets = new AssetManager();
-    void this.assets.preload();
+    // Injected app-scoped manager is shared and NOT disposed by this scene.
+    if (options.assets) {
+      this.assets = options.assets;
+      this.ownsAssets = false;
+    } else {
+      if (import.meta.env.PROD && !options.allowLocalAssetManagerForTests) {
+        throw new Error(
+          '[GameScene] AssetManager must be injected in production (wrap the app in AssetRuntimeProvider).',
+        );
+      }
+      if (!options.allowLocalAssetManagerForTests && import.meta.env.DEV && !warnedLocalManager) {
+        warnedLocalManager = true;
+        // eslint-disable-next-line no-console
+        console.warn('[GameScene] no AssetManager injected — creating a scene-local one (tests/dev only).');
+      }
+      this.assets = new AssetManager();
+      this.ownsAssets = true;
+      void this.assets.preload();
+    }
     this.connections = new ConnectionView(this.layers.get('connections'));
     this.selectionView = new SelectionView(this.layers.get('selection'));
 
@@ -88,6 +125,11 @@ export class GameScene {
     return new GameScene(app, options);
   }
 
+  /** Backing AssetManager (shared when injected). Exposed for diagnostics/tests. */
+  get assetManager(): AssetManager {
+    return this.assets;
+  }
+
   /**
    * Incrementally reconcile the board with a node list + connections. Reuses
    * existing BuildingViews (update in place), creates only new nodes, destroys
@@ -100,12 +142,13 @@ export class GameScene {
     const present = new Set(nodes.map((n) => n.id));
     const buildingLayer = this.layers.get('buildings');
 
-    // Remove gone.
+    // Remove gone (destroy releases its asset handle → refCount drops).
     for (const [id, view] of this.buildings) {
       if (!present.has(id)) {
         view.destroy();
         this.buildings.delete(id);
         this.models.delete(id);
+        this.viewAssetId.delete(id);
       }
     }
 
@@ -124,6 +167,8 @@ export class GameScene {
         view.update(model, selected);
       }
       view.setSelected(selected);
+      view.setIncidents(this.incidentsFor(node.id));
+      this.ensureTexture(node.id, model.nodeKind);
     }
 
     this.connections.sync(connections, (id) => this.positionOf(id));
@@ -135,6 +180,14 @@ export class GameScene {
     this.selectedId = nodeId;
     for (const [id, view] of this.buildings) view.setSelected(id === nodeId);
     this.updateSelectionRing();
+  }
+
+  /** Apply active incidents to the board. Incidents are deduped per target and are
+   * a SEPARATE overlay from node health (never converted into a health value). */
+  setIncidents(incidents: readonly IncidentSummary[]): void {
+    if (this.destroyed) return;
+    this.incidents = incidents;
+    for (const [id, view] of this.buildings) view.setIncidents(this.incidentsFor(id));
   }
 
   resize(): void {
@@ -151,14 +204,37 @@ export class GameScene {
     this.models.clear();
     this.connections.destroy();
     this.selectionView.destroy();
+    this.viewAssetId.clear();
     // Scene owns Sprites/Graphics/Containers/listeners → destroy with children.
     // Do NOT blanket-destroy textures here: shared/generated textures are owned by
-    // the AssetManager and released via its own dispose() (§20, FE-ART-003 seam).
+    // the AssetManager (§20, FE-ART-003). Only a scene-OWNED (non-injected) manager
+    // is disposed here; an injected app-scoped manager survives scene destroy.
     this.app.destroy(true, { children: true });
-    this.assets.dispose();
+    if (this.ownsAssets) void this.assets.disposeAll();
   }
 
   // -- internals -------------------------------------------------------------
+
+  /** Acquire the development texture for a node's kind and attach it when ready.
+   * Only re-acquires when the resolved asset id changes; releases the resolved
+   * handle if the view was removed/destroyed before the load settled. */
+  private ensureTexture(nodeId: string, kind: BuildingRenderModel['nodeKind']): void {
+    const assetId = developmentAssetIdForKind(kind);
+    if (this.viewAssetId.get(nodeId) === assetId) return;
+    this.viewAssetId.set(nodeId, assetId);
+    void this.assets.acquire(assetId).then((handle) => {
+      const view = this.buildings.get(nodeId);
+      if (this.destroyed || !view || this.viewAssetId.get(nodeId) !== assetId) {
+        handle.release();
+        return;
+      }
+      view.setTexture(handle);
+    });
+  }
+
+  private incidentsFor(nodeId: string): IncidentViewModel[] {
+    return this.incidents.length ? incidentsForTarget(this.incidents, nodeId) : [];
+  }
 
   private positionOf(nodeId: string): { x: number; y: number } | undefined {
     const m = this.models.get(nodeId);

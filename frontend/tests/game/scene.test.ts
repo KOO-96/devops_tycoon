@@ -13,7 +13,7 @@ describe('GameScene lifecycle', () => {
 
   it('creates a Pixi application and mounts the canvas', async () => {
     const host = document.createElement('div');
-    const scene = await GameScene.create(host);
+    const scene = await GameScene.create(host, { allowLocalAssetManagerForTests: true });
     expect(appInstances).toHaveLength(1);
     expect(appInstances[0]!.init).toHaveBeenCalled();
     expect(host.querySelector('canvas')).not.toBeNull();
@@ -21,7 +21,7 @@ describe('GameScene lifecycle', () => {
   });
 
   it('syncs nodes and selection without error', async () => {
-    const scene = await GameScene.create(document.createElement('div'));
+    const scene = await GameScene.create(document.createElement('div'), { allowLocalAssetManagerForTests: true });
     scene.sync(
       [
         { id: 'lb', kind: 'load_balancer', health: 'Healthy', enabled: true },
@@ -36,7 +36,7 @@ describe('GameScene lifecycle', () => {
 
   it('reports selection through the onSelect callback', async () => {
     const onSelect = vi.fn();
-    const scene = await GameScene.create(document.createElement('div'), { onSelect });
+    const scene = await GameScene.create(document.createElement('div'), { onSelect, allowLocalAssetManagerForTests: true });
     scene.sync([{ id: 'app', kind: 'app_server', health: 'Healthy', enabled: true }], []);
     const stage = appInstances[0]!.stage as unknown as Container;
     const building = findHandler(stage, 'pointertap');
@@ -47,7 +47,7 @@ describe('GameScene lifecycle', () => {
 
   it('destroy removes the resize listener and destroys the app (§26 cleanup)', async () => {
     const removeSpy = vi.spyOn(window, 'removeEventListener');
-    const scene = await GameScene.create(document.createElement('div'));
+    const scene = await GameScene.create(document.createElement('div'), { allowLocalAssetManagerForTests: true });
     scene.destroy();
     expect(appInstances[0]!.destroy).toHaveBeenCalled();
     expect(removeSpy).toHaveBeenCalledWith('resize', expect.any(Function));
@@ -57,13 +57,13 @@ describe('GameScene lifecycle', () => {
   });
 
   it('drops scene ops after destroy', async () => {
-    const scene = await GameScene.create(document.createElement('div'));
+    const scene = await GameScene.create(document.createElement('div'), { allowLocalAssetManagerForTests: true });
     scene.destroy();
     expect(() => scene.sync([], [])).not.toThrow();
   });
 
   it('reuses building views across syncs and removes only gone nodes', async () => {
-    const scene = await GameScene.create(document.createElement('div'));
+    const scene = await GameScene.create(document.createElement('div'), { allowLocalAssetManagerForTests: true });
     const stage = appInstances[0]!.stage as unknown as Container;
     const countBuildings = (): number => {
       let n = 0;

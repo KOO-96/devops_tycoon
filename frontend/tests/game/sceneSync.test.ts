@@ -39,7 +39,7 @@ const nodes = (n: number): BoardNode[] =>
 describe('GameScene diff sync', () => {
   it('handles 50 nodes and reuses views across a re-sync', async () => {
     appInstances.length = 0;
-    const scene = await GameScene.create(document.createElement('div'));
+    const scene = await GameScene.create(document.createElement('div'), { allowLocalAssetManagerForTests: true });
     scene.sync(nodes(50), []);
     expect(buildingCount()).toBe(50);
     const before = firstBuilding();
@@ -53,7 +53,7 @@ describe('GameScene diff sync', () => {
 
   it('destroys only removed nodes', async () => {
     appInstances.length = 0;
-    const scene = await GameScene.create(document.createElement('div'));
+    const scene = await GameScene.create(document.createElement('div'), { allowLocalAssetManagerForTests: true });
     scene.sync(nodes(10), []);
     expect(buildingCount()).toBe(10);
     scene.sync(nodes(4), []); // remove 6
@@ -63,7 +63,7 @@ describe('GameScene diff sync', () => {
 
   it('survives empty, unknown-kind, and duplicate-remove syncs without throwing', async () => {
     appInstances.length = 0;
-    const scene = await GameScene.create(document.createElement('div'));
+    const scene = await GameScene.create(document.createElement('div'), { allowLocalAssetManagerForTests: true });
     expect(() => scene.sync([], [])).not.toThrow();
     expect(() =>
       scene.sync([{ id: 'x', kind: 'mystery' as never, health: 'Healthy', enabled: true }], []),
@@ -77,7 +77,7 @@ describe('GameScene diff sync', () => {
 
   it('keeps connections referencing present nodes only', async () => {
     appInstances.length = 0;
-    const scene = await GameScene.create(document.createElement('div'));
+    const scene = await GameScene.create(document.createElement('div'), { allowLocalAssetManagerForTests: true });
     expect(() =>
       scene.sync(
         [

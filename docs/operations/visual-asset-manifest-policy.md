@@ -49,6 +49,21 @@ fallback. Max chain depth **3**; cycles blocked at validation; non-production-
 approved assets may not be used as fallback; the universal generated fallback is
 always available; fallback use may be logged via telemetry/diagnostics.
 
+**Runtime (Visual PR C, implemented):** the runtime manifest carries
+`categoryFallbacks: Partial<Record<AssetCategory, string>>` (tier 2), resolved by the
+AssetManager after a primary/entry miss and before the universal fallback. Validation
+adds `MISSING_CATEGORY_FALLBACK` / `BAD_CATEGORY_FALLBACK_KEY`. Depth is ≤ 3 fallback
+hops (primary excluded), linear from the original request, duplicate ids loaded once.
+See `../architecture/frontend-asset-runtime.md`.
+
+## Checksum integrity (runtime)
+
+A manifest entry may declare `checksum` (64-hex sha256; validated as `BAD_CHECKSUM`).
+On a verified mismatch the runtime discards the binary and performs **exactly one**
+cache-bypassing integrity refetch; a second mismatch → fallback. This integrity
+refetch is separate from transient retry (≤ 4 total network attempts). Generated
+development assets declare no checksum.
+
 ## CI contract (ASSET-OPS-004 — IMPLEMENTATION_PENDING)
 
 Checks to implement later (this PR defines the contract, not the workflow):

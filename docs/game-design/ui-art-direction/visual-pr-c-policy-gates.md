@@ -10,7 +10,7 @@
 | Policy | Document | Status |
 |---|---|---|
 | FE-ART-002 — Visual State Data Source Matrix | [`state-data-source-matrix.md`](./state-data-source-matrix.md) | Policy: **APPROVED_WITH_FOLLOW_UP** · Runtime impl: PR C PENDING |
-| FE-ART-003 — Shared Texture Lifecycle | [`../../architecture/frontend-shared-texture-lifecycle.md`](../../architecture/frontend-shared-texture-lifecycle.md) | Policy: **APPROVED_WITH_FOLLOW_UP** · Runtime impl: **PR C REQUIRED** |
+| FE-ART-003 — Shared Texture Lifecycle | [`../../architecture/frontend-shared-texture-lifecycle.md`](../../architecture/frontend-shared-texture-lifecycle.md) · impl [`../../architecture/frontend-asset-runtime.md`](../../architecture/frontend-asset-runtime.md) | Policy: **APPROVED_WITH_FOLLOW_UP** · Runtime impl: **IMPLEMENTED_PENDING_REVIEW** (Visual PR C) |
 | ASSET-OPS-001 — Asset Metadata Schema | [`../../operations/visual-asset-metadata-schema.md`](../../operations/visual-asset-metadata-schema.md) | Policy: **APPROVED_WITH_FOLLOW_UP** · Validator/CI: PENDING |
 | ASSET-OPS-002 — Asset Budget | [`../../operations/visual-asset-budget.md`](../../operations/visual-asset-budget.md) | Budget baseline: **APPROVED_WITH_FOLLOW_UP** · Numbers: **PROPOSED TARGETS** |
 | Asset Manifest Operational Baseline | [`../../operations/visual-asset-manifest-policy.md`](../../operations/visual-asset-manifest-policy.md) | Policy: **APPROVED_WITH_FOLLOW_UP** · Runtime impl: PR C REQUIRED |
@@ -23,10 +23,10 @@ Parallel reviews: Backend Contract / Frontend Architecture / Ops / Program / Dev
 
 | ID | Title | Due |
 |---|---|---|
-| POLICY-C-FU-001 | Formal Client Runtime source classes (CLIENT_LOCAL / CLIENT_CONNECTION / CLIENT_SYNC / ASSET_RUNTIME) | Before/inside PR C first impl commit |
-| POLICY-C-FU-002 | Event-derived visual lifecycle (start/duration/clear/replay/dedupe/late/priority/session/reduced-motion) | Before any EVENT_DERIVED effect (PR C/D) |
-| POLICY-C-FU-003 | Incident overlay stacking & dedupe (same type+target, phase handling, max shown, overflow, health-badge separation) | Before/inside PR C incident overlay |
-| POLICY-C-FU-004 | Asset retry semantics (initial + ≤2 retries = 3 max; 8s per attempt; shared per key; no retry on 4xx/schema/license) | Before PR C load impl |
+| POLICY-C-FU-001 | Formal Client Runtime source classes (CLIENT_LOCAL / CLIENT_CONNECTION / CLIENT_SYNC / ASSET_RUNTIME) | **IMPLEMENTED (PR C)** — `src/game/visualSource.ts` |
+| POLICY-C-FU-002 | Event-derived visual lifecycle (start/duration/clear/replay/dedupe/late/priority/session/reduced-motion) | Before any EVENT_DERIVED effect (PR C/D) — NOT in this PR |
+| POLICY-C-FU-003 | Incident overlay stacking & dedupe (same type+target, phase handling, max shown, overflow, health-badge separation) | **IMPLEMENTED (PR C)** — `src/game/incidentModel.ts` |
+| POLICY-C-FU-004 | Asset retry semantics (initial + ≤2 retries = 3 max; 8s per attempt; shared per key; no retry on 4xx/schema/license) | **IMPLEMENTED (PR C)** — `src/game/pixi/assets/retry.ts` |
 | POLICY-C-FU-005 | Deterministic Metadata→Manifest generation (single tool; no manual double-entry) | Before ASSET-OPS-004 & first production asset |
 | POLICY-C-FU-006 | Mipmap budget enforcement (32 MiB assumes no mipmaps; opt-in recomputes) | Before first production asset |
 | POLICY-C-FU-007 | Oversized (4096²) texture exception accounting vs 64 MiB resident | Before first production asset |
@@ -34,9 +34,31 @@ Parallel reviews: Backend Contract / Frontend Architecture / Ops / Program / Dev
 | POLICY-C-FU-009 | Critical bundle transfer measurement basis (download bytes, cold cache, format/compression recorded) | Before first production asset |
 | POLICY-C-FU-010 | Asset load reference environment (browser/OS/CPU/GPU/network; start=manifest request, end=Ready incl. decode+upload) | Before first production asset |
 
-FE-ART-003 implementation follow-ups (PR C **required**):
-FE-ART-003-FU-001 App-scope AssetManager hoist · FU-002 Asset Handle + refCount ·
-FU-003 HMR/test reset · FU-004 concurrent-load / dispose-race handling.
+FE-ART-003 implementation follow-ups — **IMPLEMENTED in Visual PR C**
+(`frontend-asset-runtime.md`): FU-001 App-scope AssetManager hoist · FU-002 Asset
+Handle + refCount + versioned cache · FU-003 HMR/test reset · FU-004 concurrent-load /
+dispose-race handling. Pending review; PR C **Completion Gate** still requires the
+implementation verification listed below.
+
+Review-round-2 fixes (REQUEST_CHANGES → addressed): **three-tier fallback**
+(Entry → **Category** → Universal, depth ≤ 3, cycle-guarded) and **checksum
+verification with a single bounded integrity refetch** (≤ 4 total attempts) are now
+implemented, plus a production fail-fast on an uninjected AssetManager and a
+StrictMode provider test.
+
+Round-3 Ops enablement: **live-browser verification is VERIFIED** — test-only
+harnesses run the fallback/checksum/race paths (10/10) and a full-app lifecycle smoke
+(5/5) in real Chromium/WebGL2 (SwiftShader), backend on PostgreSQL 16.14 + Redis 7.4.9.
+See [`../../operations/visual-pr-c-live-verification.md`](../../operations/visual-pr-c-live-verification.md).
+Harnesses are excluded from the production bundle; ASSET-OPS-004 stays
+IMPLEMENTATION_PENDING (no CI added).
+
+Round-4 socket re-verify: the earlier "2 dev game sockets" REQUEST_CHANGES was a
+**measurement artifact** — the instrumentation counted Vite's dev HMR socket. Measured
+by `readyState`/URL, the **game socket is 1 in both dev and preview**. The counter now
+filters to the game path. A genuine (narrow) teardown-before-connect orphan-socket race
+was found and fixed in `GameSessionController` (generation-safe teardown + guarded
+connect/handlers), covered by `tests/session/controllerLifecycle.test.ts`.
 
 ## Gates
 

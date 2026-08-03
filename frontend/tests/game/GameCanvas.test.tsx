@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, waitFor } from '@testing-library/react';
 
-const sceneMock = { sync: vi.fn(), setSelection: vi.fn(), destroy: vi.fn() };
+vi.mock('pixi.js', async () => await import('../helpers/fakePixi'));
+
+const sceneMock = { sync: vi.fn(), setSelection: vi.fn(), setIncidents: vi.fn(), destroy: vi.fn() };
 const createMock = vi.fn().mockResolvedValue(sceneMock);
 
 vi.mock('../../src/game/pixi/createGameScene', () => ({
