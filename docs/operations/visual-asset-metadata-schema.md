@@ -8,6 +8,13 @@ Separates the **Runtime Manifest** (what the app loads — see
 `visual-asset-manifest-policy.md`) from **Production Metadata** (provenance, rights,
 approval, integrity). This document defines the Production Metadata record.
 
+> **Asset Production Enablement P1 (canonical policy):** the governance/approval/
+> generation/gate policy that operationalizes this schema lives in
+> [`production-asset-metadata-policy.md`](./production-asset-metadata-policy.md) and its
+> companions. Production Metadata is the **canonical governance source**; the Runtime
+> Manifest is **deterministically generated** from approved metadata and never
+> hand-edited.
+
 ## Why separate
 
 The Runtime Manifest ships in the bundle and is read every load; Production Metadata

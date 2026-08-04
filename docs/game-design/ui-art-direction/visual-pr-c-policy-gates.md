@@ -17,7 +17,7 @@
 | ASSET-OPS-001 — Asset Metadata Schema | [`../../operations/visual-asset-metadata-schema.md`](../../operations/visual-asset-metadata-schema.md) | Policy: **APPROVED_WITH_FOLLOW_UP** · Validator/CI: PENDING |
 | ASSET-OPS-002 — Asset Budget | [`../../operations/visual-asset-budget.md`](../../operations/visual-asset-budget.md) | Budget baseline: **APPROVED_WITH_FOLLOW_UP** · Numbers: **PROPOSED TARGETS** |
 | Asset Manifest Operational Baseline | [`../../operations/visual-asset-manifest-policy.md`](../../operations/visual-asset-manifest-policy.md) | Policy: **APPROVED_WITH_FOLLOW_UP** · Runtime impl: **IMPLEMENTED_IN_DEV** |
-| ASSET-OPS-004 — Manifest CI | (in manifest policy) | **IMPLEMENTATION_PENDING** (before first production asset) |
+| ASSET-OPS-004 — Manifest CI | (in manifest policy) · P1 contract [`../../operations/asset-ops-004-contract-matrix.md`](../../operations/asset-ops-004-contract-matrix.md) | **POLICY_DEFINED_IMPLEMENTATION_PENDING** (before first production asset) |
 
 Parallel reviews: Backend Contract / Frontend Architecture / Ops / Program / DevCTO
 = **APPROVED_WITH_FOLLOW_UP**. Cross-policy blocking issues: **NONE**.
@@ -30,12 +30,12 @@ Parallel reviews: Backend Contract / Frontend Architecture / Ops / Program / Dev
 | POLICY-C-FU-002 | Event-derived visual lifecycle (start/duration/clear/replay/dedupe/late/priority/session/reduced-motion) | Before any EVENT_DERIVED effect (PR C/D) — NOT in this PR |
 | POLICY-C-FU-003 | Incident overlay stacking & dedupe (same type+target, phase handling, max shown, overflow, health-badge separation) | **IMPLEMENTED (PR C)** — `src/game/incidentModel.ts` |
 | POLICY-C-FU-004 | Asset retry semantics (initial + ≤2 retries = 3 max; 8s per attempt; shared per key; no retry on 4xx/schema/license) | **IMPLEMENTED (PR C)** — `src/game/pixi/assets/retry.ts` |
-| POLICY-C-FU-005 | Deterministic Metadata→Manifest generation (single tool; no manual double-entry) | Before ASSET-OPS-004 & first production asset |
-| POLICY-C-FU-006 | Mipmap budget enforcement (32 MiB assumes no mipmaps; opt-in recomputes) | Before first production asset |
-| POLICY-C-FU-007 | Oversized (4096²) texture exception accounting vs 64 MiB resident | Before first production asset |
-| POLICY-C-FU-008 | Manifest swap-peak budget (steady-state vs swap peak measured separately) | Before first production asset |
-| POLICY-C-FU-009 | Critical bundle transfer measurement basis (download bytes, cold cache, format/compression recorded) | Before first production asset |
-| POLICY-C-FU-010 | Asset load reference environment (browser/OS/CPU/GPU/network; start=manifest request, end=Ready incl. decode+upload) | Before first production asset |
+| POLICY-C-FU-005 | Deterministic Metadata→Manifest generation (single tool; no manual double-entry) | **POLICY_DEFINED_IMPLEMENTATION_PENDING** (P1) — before ASSET-OPS-004 & first production asset |
+| POLICY-C-FU-006 | Mipmap budget enforcement (32 MiB assumes no mipmaps; opt-in recomputes) | **POLICY_DEFINED_IMPLEMENTATION_PENDING** (P1) — before first production asset |
+| POLICY-C-FU-007 | Oversized (4096²) texture exception accounting vs 64 MiB resident | **POLICY_DEFINED_IMPLEMENTATION_PENDING** (P1) — before first production asset |
+| POLICY-C-FU-008 | Manifest swap-peak budget (steady-state vs swap peak measured separately) | **POLICY_DEFINED_IMPLEMENTATION_PENDING** (P1) — before first production asset |
+| POLICY-C-FU-009 | Critical bundle transfer measurement basis (download bytes, cold cache, format/compression recorded) | **POLICY_DEFINED_IMPLEMENTATION_PENDING** (P1) — before first production asset |
+| POLICY-C-FU-010 | Asset load reference environment (browser/OS/CPU/GPU/network; start=manifest request, end=Ready incl. decode+upload) | **POLICY_DEFINED_IMPLEMENTATION_PENDING** (P1) — before first production asset |
 
 FE-ART-003 implementation follow-ups — **IMPLEMENTED in Visual PR C**
 (`frontend-asset-runtime.md`): FU-001 App-scope AssetManager hoist · FU-002 Asset
@@ -80,7 +80,20 @@ manifest replacement + stale cleanup, HMR/test reset, load/dispose-race handling
 formal client source classes, incident overlay stacking/dedupe, and the exact retry
 state machine.
 
-**First Production Asset Gate:** POLICY-C-FU-005…010 and ASSET-OPS-004 CI.
+**First Production Asset Gate:** POLICY-C-FU-005…010 and ASSET-OPS-004 CI. **CLOSED.**
+Definition + checklist: [`../../operations/first-production-asset-gate.md`](../../operations/first-production-asset-gate.md).
+
+## Asset Production Enablement (post-PR-C)
+
+P1 (policy baseline, **POLICY_DEFINED_PENDING_DEVCTO_REVIEW**) defines the production-asset
+governance: canonical metadata, approval states, license/provenance, deterministic
+Metadata→Manifest generation, the ASSET-OPS-004 contract matrix, budget confirmation, and
+the First Production Asset Gate. Canonical docs under `docs/operations/`:
+`production-asset-metadata-policy.md` · `production-asset-approval-workflow.md` ·
+`asset-ops-004-contract-matrix.md` · `production-asset-budget-confirmation.md` ·
+`first-production-asset-gate.md`. Implementation follows as P2 (infra validator + required
+CI check) · P3 (frontend deterministic generator) · P4 (end-to-end dry-run). No assets,
+no CI, no budget confirmation in P1.
 
 ## Confirmed contract facts (basis)
 
