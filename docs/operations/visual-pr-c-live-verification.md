@@ -127,7 +127,7 @@ docker rm -f vc-pg vc-redis
 
 ## Status
 - Ops Live-browser: **VERIFIED** (asset-runtime 10/10 + full-app 5/5, real WebGL2)
-- FE-ART-003 Runtime: IMPLEMENTED_PENDING_REVIEW
-- ASSET-OPS-004: IMPLEMENTATION_PENDING
+- FE-ART-003 Runtime: **IMPLEMENTED_IN_DEV** (Visual PR C merged to dev)
+- ASSET-OPS-004: IMPLEMENTATION_PENDING (before first production asset)
 - Production Metadata generator: not implemented · EVENT_DERIVED: not implemented ·
   Budgets: PROPOSED TARGETS
