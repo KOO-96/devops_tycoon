@@ -74,6 +74,11 @@ license metadata present; production approval; texture dimension; atlas dimensio
 compressed bundle size; estimated GPU memory; unused manifest entry; runtime asset
 absent from manifest. **No workflow code in this PR.**
 
+> **P1 detail:** the full ASSET-OPS-004 check matrix (C01–C26 with rules, error codes,
+> severity, merge-blocking, fixtures, owners) plus the `POLICY_DEFINED → … → COMPLETE`
+> status model and the `IMPLEMENTED_PENDING_CI_ENFORCEMENT` caveat are in
+> [`asset-ops-004-contract-matrix.md`](./asset-ops-004-contract-matrix.md).
+
 ## Loading failure & recovery
 
 Preload progress; per-bundle timeout; limited retry (ASSET-OPS-002); fallback;
