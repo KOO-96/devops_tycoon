@@ -4,6 +4,12 @@
 - Base: dev `65adf13`. All numbers below are **Proposed** — not Confirmed until
   reviewed. Documentation only.
 
+> **Budget confirmation (P1):** the per-item `PROPOSED → MEASURED → REVIEWED → CONFIRMED`
+> workflow and the POLICY-C-FU-006~010 completion contracts (mipmap, 4096² exception,
+> swap-peak, transfer basis, reference environment) are in
+> [`production-asset-budget-confirmation.md`](./production-asset-budget-confirmation.md).
+> These numbers remain **PROPOSED**; P1 promotes nothing to Confirmed/SLA.
+
 Numeric budgets for textures, atlases, memory, loading, and animation, sized for the
 Illustrated Pixel Hybrid direction (UI-D-001) on the 128×64 logical / 64×32 source /
 2× integer scale (UI-D-002).

@@ -68,7 +68,19 @@ scope below:
 - **Tests:** snapshot→board sync for all 14 commands; Down≠Healthy; disconnect removes line.
 - **Perf risk:** medium. **Reviewers:** Frontend, Program, Ops.
 
+## Asset Production Enablement (unblocks real art for C/D/E) — P1 POLICY_DEFINED
+- **Status: P1 POLICY_DEFINED_PENDING_DEVCTO_REVIEW.** Defines the production-asset
+  governance so real sprites/atlases can eventually replace development placeholders:
+  canonical Production Metadata, approval states, license/provenance, deterministic
+  Metadata→Manifest generation, ASSET-OPS-004 validator contract, budget confirmation, and
+  the First Production Asset Gate (CLOSED). Docs under `docs/operations/`
+  (`production-asset-*`, `asset-ops-004-contract-matrix.md`). Implementation = P2 (infra
+  validator + required CI) · P3 (frontend generator) · P4 (dry-run). **No assets, CI, or
+  budget confirmation in P1.** Independent of PR D; a prerequisite for merging any real
+  production asset in C/D/E.
+
 ## PR D — Effects & feedback
+- **Blocked by POLICY-C-FU-002** (EVENT_DERIVED lifecycle, NOT_IMPLEMENTED) — author before starting.
 - **Scope:** request flow, connection flow, alert overlay, deploy/rollback, down, cache
   hit/miss, DB pool pressure.
 - **Assets:** effect atlases.
