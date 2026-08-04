@@ -90,6 +90,33 @@ report entry. **Silent inclusion is prohibited.**
 | `approval_state == DEPRECATED` | **Excluded with report** (not an error; kept for rollback) |
 | Non-blocking advisory (e.g. unused optional field) | **Warning** |
 
+### 4a. Exclusion report — minimum contract (§23)
+
+Every excluded asset gets a report entry (no silent exclusion):
+
+```
+{ asset_id, asset_version, approval_state, exclusion_reason_code, source_metadata_path,
+  referenced_by_runtime: bool, merge_blocking: bool, message }
+```
+
+- `DEPRECATED` **must** appear in the exclusion report.
+- If an excluded asset is `referenced_by_runtime`, the `unmanifested runtime asset` check
+  (C20) **fails** (merge-blocked) — an excluded-but-needed asset never silently disappears.
+- `REVOKED` is excluded from new manifests **and** hard-errors on new input, **and** is
+  subject to rollback-eligibility (§5a).
+
+### 5a. REVOKED must not be reactivated by rollback (§22)
+
+A rollback artifact may **record** past releases that referenced a now-`REVOKED` asset
+(history/audit), but the pipeline **prohibits**: a current rollback **candidate** that
+reactivates a REVOKED asset; a rollback index marking a REVOKED-containing release
+`eligible=true`; any new release including a rights-revoked asset. **C25 is extended**:
+every asset in a rollback candidate manifest is checked against current approval state; a
+candidate containing a REVOKED asset is **ineligible** (`ASSET_ROLLBACK_REVOKED_TARGET`),
+and if **no** safe (no-REVOKED) rollback artifact exists the release gate **fails**.
+**Never exceptionable — not even by DevCTO;** a re-cut or a safe rollback artifact is
+required.
+
 ## 5. Exception procedure (§29)
 
 Some technical checks may be waived by a **DevCTO-signed exception**; rights/approval
