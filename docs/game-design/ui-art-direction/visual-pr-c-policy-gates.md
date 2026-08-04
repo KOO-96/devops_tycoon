@@ -1,6 +1,9 @@
 # Visual PR C — Policy Gates Index (DevCTO Integration)
 
-- Owner: Program (index) · Status: **DevCTO: APPROVED_WITH_FOLLOW_UP**
+- Owner: Program (index) · Status: **DevCTO: APPROVED_WITH_FOLLOW_UP · Visual PR C: COMPLETE_IN_DEV**
+- Visual PR C runtime merged to `dev` (PR #21 → review/devcto, PR #22 → dev). Runtime
+  implemented + Ops live-browser VERIFIED. First-production-asset and EVENT_DERIVED
+  gates remain open (see below); numeric budgets remain Proposed.
 - Purpose: single index of the Visual PR C prerequisite policies, their approval
   status, and the follow-up/gate schedule. This file **links** to the authoritative
   detail docs and does not restate policy bodies.
@@ -9,12 +12,12 @@
 
 | Policy | Document | Status |
 |---|---|---|
-| FE-ART-002 — Visual State Data Source Matrix | [`state-data-source-matrix.md`](./state-data-source-matrix.md) | Policy: **APPROVED_WITH_FOLLOW_UP** · Runtime impl: PR C PENDING |
-| FE-ART-003 — Shared Texture Lifecycle | [`../../architecture/frontend-shared-texture-lifecycle.md`](../../architecture/frontend-shared-texture-lifecycle.md) · impl [`../../architecture/frontend-asset-runtime.md`](../../architecture/frontend-asset-runtime.md) | Policy: **APPROVED_WITH_FOLLOW_UP** · Runtime impl: **IMPLEMENTED_PENDING_REVIEW** (Visual PR C) |
+| FE-ART-002 — Visual State Data Source Matrix | [`state-data-source-matrix.md`](./state-data-source-matrix.md) | Policy: **APPROVED_WITH_FOLLOW_UP** · Runtime impl: **IMPLEMENTED_IN_DEV** |
+| FE-ART-003 — Shared Texture Lifecycle | [`../../architecture/frontend-shared-texture-lifecycle.md`](../../architecture/frontend-shared-texture-lifecycle.md) · impl [`../../architecture/frontend-asset-runtime.md`](../../architecture/frontend-asset-runtime.md) | Policy: **APPROVED_WITH_FOLLOW_UP** · Runtime impl: **IMPLEMENTED_IN_DEV** (Visual PR C) |
 | ASSET-OPS-001 — Asset Metadata Schema | [`../../operations/visual-asset-metadata-schema.md`](../../operations/visual-asset-metadata-schema.md) | Policy: **APPROVED_WITH_FOLLOW_UP** · Validator/CI: PENDING |
 | ASSET-OPS-002 — Asset Budget | [`../../operations/visual-asset-budget.md`](../../operations/visual-asset-budget.md) | Budget baseline: **APPROVED_WITH_FOLLOW_UP** · Numbers: **PROPOSED TARGETS** |
-| Asset Manifest Operational Baseline | [`../../operations/visual-asset-manifest-policy.md`](../../operations/visual-asset-manifest-policy.md) | Policy: **APPROVED_WITH_FOLLOW_UP** · Runtime impl: PR C REQUIRED |
-| ASSET-OPS-004 — Manifest CI | (in manifest policy) | **IMPLEMENTATION_PENDING** |
+| Asset Manifest Operational Baseline | [`../../operations/visual-asset-manifest-policy.md`](../../operations/visual-asset-manifest-policy.md) | Policy: **APPROVED_WITH_FOLLOW_UP** · Runtime impl: **IMPLEMENTED_IN_DEV** |
+| ASSET-OPS-004 — Manifest CI | (in manifest policy) | **IMPLEMENTATION_PENDING** (before first production asset) |
 
 Parallel reviews: Backend Contract / Frontend Architecture / Ops / Program / DevCTO
 = **APPROVED_WITH_FOLLOW_UP**. Cross-policy blocking issues: **NONE**.
