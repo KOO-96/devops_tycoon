@@ -40,9 +40,13 @@ A production asset may merge **only when ALL** hold:
 
 ## Ordering / dependencies
 
-- The gate cannot open until **P2 (validator + required CI check)** and **P3 (deterministic
-  generator)** are complete and **P4 (end-to-end dry-run with a throwaway placeholder)** has
+- The gate cannot open until **P2 (validator + required CI check)** and the **P3 generator/
+  loaders** are complete and **P4 (end-to-end dry-run with a throwaway placeholder)** has
   proven the whole path green — all **without** a committed binary.
+- **Loader sequencing (`ATLAS_LOADER_CASE_B`, APE-P3-FU-001):** the runtime has no real
+  image/atlas loader yet. The first production **image** asset is blocked until **P2 + P3A +
+  P4**; the first production **atlas** asset is blocked until **P2 + P3A + P3B + P4**. P3A
+  alone does **not** make atlas assets production-ready.
 - Rights/approval conditions (4–9, 19) are **never** waivable by exception; only the
   technical budget/dimension checks (10, 12, 13) may use a DevCTO exception record.
 

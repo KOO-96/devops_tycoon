@@ -130,6 +130,27 @@ binary source:
 - P3 must not damage the existing generated-fallback contract; production art enters only
   as `image` / `atlas`.
 
+## 6c. Runtime loader status — `ATLAS_LOADER_CASE_B` (DevCTO decision)
+
+Verified against dev: `AssetSourceType` includes `atlas`, but there is **no real image or
+atlas loader** — `GeneratedAssetLoader` draws a canvas per `assetId` and does **not** fetch
+`source`; there is no Pixi `Spritesheet` / `Assets.load` path. Official determination:
+**`ATLAS_LOADER_CASE_B`** — the P1 mappings are a valid **forward contract** that does not
+conflict with the current runtime, but **real production asset consumption is not yet
+possible**. The real loaders are a named implementation scope (see APE-P3-FU-001); P3 must
+not guess this.
+
+### APE-P3-FU-001 — Production Asset Loader Sequencing (registered)
+- **P3A** — deterministic Metadata→Manifest generator · **production image loader** (fetch
+  `source`, Web-Crypto checksum verify wired to the existing verifier, AssetManager/handle/
+  cache boundary) · image fixtures · regeneration-diff check.
+- **P3B** — **production atlas loader** (fetch descriptor via `source`, verify JSON checksum;
+  fetch atlas image, verify image checksum or consume P2's verdict; build Pixi Spritesheet;
+  resolve `frame`; texture lifecycle/refCount) · atlas fixtures.
+- **Gate**: first production **image** asset blocked until **P2 + P3A + P4**; first production
+  **atlas** asset blocked until **P2 + P3A + P3B + P4**. **P3A completion alone does NOT make
+  atlas production-ready.**
+
 ## 6. Source types (§9)
 
 | `source_type` | Meaning | In first production gate? |
