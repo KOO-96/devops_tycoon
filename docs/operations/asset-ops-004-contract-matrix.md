@@ -20,14 +20,14 @@ with the code). Owner: **I**=infra (P2 validator/CI), **F**=frontend (P3 generat
 | C02 | duplicate assetId+version | metadata set | `(asset_id, asset_version)` unique | `DUP_ASSET_VERSION` | E | yes | I |
 | C03 | duplicate frame | atlas metadata | `(atlas_id, atlas_version, frame_name)` unique | `DUP_FRAME` | E | yes | I |
 | C04 | source exists | metadata + fs | `source_path` binary exists | `SOURCE_MISSING` | E | yes | I |
-| C05 | atlas JSON↔image | atlas | frames in JSON fit the image; image referenced by JSON | `ATLAS_INCONSISTENT` | E | yes | I |
+| C05 | atlas JSON↔image | atlas | JSON exists; image exists; JSON-referenced image name/path == metadata `atlas_image_path`; every frame within image bounds; no dup frame; metadata `frame` present | `ATLAS_INCONSISTENT`, `ASSET_ATLAS_IMAGE_REFERENCE_MISMATCH` | E | yes | I |
 | C06 | frame-name convention | atlas | frame names match convention | `FRAME_NAME_INVALID` | E | yes | I |
 | C07 | anchor range | metadata | anchor x/y ∈ [0,1] | `ANCHOR_RANGE` | E | yes | I |
 | C08 | footprint range | metadata | footprint w/h ∈ 1..4 integer | `FOOTPRINT_RANGE` | E | yes | I |
 | C09 | fallback exists | metadata | `fallback_asset_id` resolves | `FALLBACK_MISSING` | E | yes | I |
 | C10 | fallback cycle | metadata graph | no entry/category cycle | `FALLBACK_CYCLE` | E | yes | I |
 | C11 | fallback depth | metadata graph | chain ≤ 3 hops | `FALLBACK_DEPTH` | E | yes | I |
-| C12 | checksum | metadata + binary | `checksum_sha256` matches binary; 64-hex | `CHECKSUM_MISMATCH` | E | yes | I |
+| C12 | source-artifact checksum integrity | metadata + artifacts | **image:** `checksum_sha256` matches source (64-hex). **atlas:** `atlas_json_checksum_sha256` matches JSON **and** `atlas_image_checksum_sha256` matches image; both required; report which artifact failed | `ASSET_CHECKSUM_IMAGE_MISMATCH`, `ASSET_CHECKSUM_ATLAS_JSON_MISMATCH`, `ASSET_CHECKSUM_ATLAS_IMAGE_MISMATCH` | E | yes | I |
 | C13 | license metadata | metadata | `license_type != unknown` + evidence per license model | `LICENSE_INVALID` | E | yes | I |
 | C14 | production approval | metadata | `APPROVED_FOR_PRODUCTION` + complete approval record, version-bound | `APPROVAL_INVALID` | E | yes | I |
 | C15 | texture dimension | metadata + image | ≤ 2048 recommended; ≤ 4096 hard-max **or** valid exception | `TEXTURE_DIMENSION` | E | yes | I |
@@ -40,7 +40,7 @@ with the code). Owner: **I**=infra (P2 validator/CI), **F**=frontend (P3 generat
 | C22 | deterministic generation | metadata | regenerate ⇒ byte-identical to committed manifest | `NONDETERMINISTIC` | E | yes | F |
 | C23 | bundle dependency cycle | bundle graph | no cycle; shared asset single-owner | `BUNDLE_CYCLE` | E | yes | I |
 | C24 | build-id consistency | manifest + build meta | `build_id` = hash of canonical metadata + gen/schema version | `BUILD_ID_MISMATCH` | E | yes | F |
-| C25 | rollback artifact | release | rollback index present + consistent | `ROLLBACK_MISSING` | E | yes | I |
+| C25 | rollback artifact | release | rollback index present + consistent; **every asset in a rollback CANDIDATE manifest checked against current approval state — a candidate containing a REVOKED asset is INELIGIBLE; ≥1 safe (no-REVOKED) rollback artifact must exist**; presence alone is not sufficient | `ROLLBACK_MISSING`, `ASSET_ROLLBACK_REVOKED_TARGET` | E | yes | I |
 | C26 | stale-version retention | cache/release policy | superseded versions within retention budget | `STALE_RETENTION` | E (Excl if within grace) | yes | I |
 
 Completion evidence per row: valid fixture green + each invalid fixture red with the exact
@@ -66,11 +66,50 @@ COMPLETE                           ← all of the above + bypass procedure docum
   the org cannot host CI, an equivalent enforced pre-merge gate must be documented; a purely
   local script is `CLI_IMPLEMENTED`/`FIXTURE_TESTED`, not `REQUIRED_CHECK_ENFORCED`.
 
+## Validator interface (P2 implementation contract)
+
+**Required check name (fixed):** `asset-production-gate`. Branch protection must use this
+**exact check-run name** (not merely a workflow name). Renaming it changes policy + workflow
++ branch protection **atomically**. Without a wired required check, ASSET-OPS-004 is not
+COMPLETE (§status model).
+
+**Exit codes (§19 of corrections):**
+
+| Code | Meaning | Merge |
+|---|---|---|
+| 0 | all merge-blocking checks pass (warnings-only, or DEPRECATED exclude-with-report + intact reference integrity, are allowed) | pass |
+| 1 | ≥1 merge-blocking policy/asset violation | **block** |
+| 2 | bad CLI usage / config error / input path inaccessible | **block** |
+| 3 | validator internal error / unhandled exception / report-generation failure | **block** |
+
+A JSON report is emitted on every exit where possible.
+
+**Machine-readable report (§20):**
+
+```json
+{ "schema_version": "...", "tool_version": "...", "required_check": "asset-production-gate",
+  "build_id": "...", "status": "pass|fail|error",
+  "summary": { "errors": 0, "warnings": 0, "excluded": 0, "passed_checks": 0, "failed_checks": 0 },
+  "results": [ { "check_id": "", "code": "", "severity": "", "merge_blocking": true,
+    "asset_id": "", "asset_version": "", "artifact_path": "", "message": "",
+    "exception_id": null, "details": {} } ] }
+```
+
+Results ordering deterministic; **no machine-specific absolute paths, PII, or secrets**; a
+human-readable summary is derived from the same results.
+
+**Error-code compatibility (§21):** error codes are a stable automation/CI-annotation
+contract. A code's meaning is never repurposed; codes are deprecated, not deleted; adding a
+code is a tool **minor** version; changing a code's meaning is a **major**/contract version.
+Report `schema_version` and validator `tool_version` are managed separately.
+
 ## Exception verification (§29)
 
 Checks C15/C16/C17/C18/C26 may be waived **only** by a DevCTO exception record
 (`production-asset-approval-workflow.md §5`) that CI validates (present, active, unexpired,
-version-and-check matched). C01/C10/C12/C13/C14/C22/C25 are **never** exceptionable.
+version-and-check matched). **C01 / C10 / C12 / C13 / C14 / C22 / C25 are NEVER
+exceptionable** — including `ASSET_ROLLBACK_REVOKED_TARGET`: **not even DevCTO may approve
+reactivating a rights-revoked asset**; a re-cut or a safe rollback artifact is required.
 
 ## Status
 Contract defined; **not** implemented. Owners: matrix `Owner` column. Next: P2 implements
