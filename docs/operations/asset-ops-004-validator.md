@@ -74,8 +74,63 @@ committed under `assets/metadata/`, per policy §2.
   `ASSET_ROLLBACK_REVOKED_TARGET` (a rights-revoked asset can never be reactivated by
   rollback; a re-cut or a safe rollback artifact is required).
 
-Coverage evidence: `pytest -q tests/asset_ops` (positive + all negatives + determinism +
-exit-code + exception-waiver + REVOKED-rollback tests).
+### Manifest `categoryFallbacks` (C09/C10/C11 — combined fallback graph)
+
+C09–C11 validate the runtime manifest's `categoryFallbacks` (metadata-policy §10c) in
+addition to the metadata fallback graph, keeping the existing C09–C11 numbering and
+adding artifact-specific codes (existing `FALLBACK_MISSING`/`FALLBACK_CYCLE`/
+`FALLBACK_DEPTH` are unchanged and not repurposed):
+
+| Code | Check | Condition |
+|---|---|---|
+| `ASSET_CATEGORY_FALLBACK_INVALID_KEY` | C09 | key is not a runtime `AssetCategory` (or field is not an object) |
+| `ASSET_CATEGORY_FALLBACK_TARGET_MISSING` | C09 | target is not a valid assetId / not present in manifest assets |
+| `ASSET_CATEGORY_FALLBACK_TARGET_EXCLUDED` | C09 | target is a known asset but excluded (DEPRECATED/REVOKED/not includable) |
+| `ASSET_CATEGORY_FALLBACK_CYCLE` | C10 | the **combined** fallback graph has a cycle |
+| `ASSET_CATEGORY_FALLBACK_DEPTH_EXCEEDED` | C11 | a combined fallback chain exceeds 3 hops |
+
+**Combined fallback graph** — each manifest asset resolves its fallback in this order:
+1. **Entry:** `assetId → entry.fallbackAssetId` (when present)
+2. **Category:** `assetId → categoryFallbacks[category]` (when no entry fallback)
+3. **Universal:** terminal (no outgoing edge)
+
+A **hop** is one traversal of an Entry-or-Category edge; the Universal terminal is not an
+edge and is never counted as a cycle. Max chain depth is **3 hops**. Target inclusion is
+decided by the single `canonical.is_production_includable` predicate, so an excluded
+target is caught regardless of any manifest tampering.
+
+Coverage evidence: `pytest -q tests/asset_ops` (positive + all negatives incl. the 7
+independent `categoryFallbacks` fixtures + determinism + exit-code + exception-waiver +
+REVOKED-rollback + build_id inclusion-set regression tests).
+
+## Shared canonical layer & the inclusion predicate
+
+`tools/asset_ops/canonical.py` holds the **shared canonical primitives** — the inclusion
+predicate (`is_production_includable` / `has_production_approval` /
+`canonical_included_metadata`), the metadata→manifest field mapping (`metadata_to_entry`),
+byte-stable serialization, and the `build_id` envelope. **It is not the production
+manifest generator.** The validator (`checks.py`), the build_id included set, and the test
+fixture builder all call these primitives, so no component carries its own inclusion rule
+or mapping. `checks.py` still owns all detailed C01–C26 error codes and report results;
+`canonical.py` only classifies and orders deterministically.
+
+The test fixture builder's `regenerate_derived` is a **test-only workspace assembly
+helper** — not the production generator and not the official Metadata→Manifest API. It
+calls the canonical primitives so a fixture stays internally consistent; when P3A lands
+the official Python generator, `regenerate_derived` will be replaced by a call to it.
+
+**P2 and P3A become aligned "by construction"** only when the P3A generator imports these
+same primitives directly. **PR #29 does not implement the production manifest generator.**
+
+## P3A generator — recorded decision
+
+- **Generator runtime:** a **Python build-time tool**, located in **`tools/asset_ops/`**,
+  that imports `canonical.py` directly.
+- **Official generator:** implemented in **P3A** (not in this PR).
+- **Frontend (TypeScript):** consumes the generated manifest JSON **only**.
+- **TypeScript must NOT re-implement** any of: the approval/inclusion filter, the
+  metadata→manifest mapping, canonical serialization, `build_id`, or exclusion
+  classification. Those live once, in `canonical.py`.
 
 ## CI
 
