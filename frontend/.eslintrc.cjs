@@ -22,7 +22,9 @@ module.exports = {
     'vitest.config.ts',
     'playwright.asset-runtime.config.ts',
     'playwright.visual-pr-c.config.ts',
+    'playwright.production-image.config.ts',
     'tests/browser/asset-runtime/vite.config.ts',
+    'tests/browser/production-image/vite.config.ts',
   ],
   rules: {
     'react-hooks/rules-of-hooks': 'error',
@@ -43,6 +45,7 @@ module.exports = {
         '@typescript-eslint/no-unsafe-argument': 'off',
         '@typescript-eslint/no-unsafe-return': 'off',
         '@typescript-eslint/no-explicit-any': 'off',
+        '@typescript-eslint/require-await': 'off',
         '@typescript-eslint/no-unnecessary-type-assertion': 'off',
         '@typescript-eslint/unbound-method': 'off',
         '@typescript-eslint/no-base-to-string': 'off',
