@@ -1,0 +1,48 @@
+{
+  "_comment": "Shared conformance vectors for the runtime fallback candidate sequence. The execution contract is frontend/src/game/pixi/assets/AssetManager.ts resolveTiered (fixed, non-recursive: primary -> entry -> category -> universal). A future TypeScript runtime test may consume this same file; the Python validator conformance test does today.",
+  "universalFallbackAssetId": "fallback.universal.generated",
+  "maxFallbackDepth": 3,
+  "cases": [
+    {
+      "name": "entry_then_category_then_universal",
+      "assets": {
+        "building.a": { "category": "building", "fallbackAssetId": "building.b" },
+        "building.b": { "category": "building" }
+      },
+      "categoryFallbacks": { "building": "tile.c" },
+      "request": "building.a",
+      "expectedCandidates": ["building.a", "building.b", "tile.c", "fallback.universal.generated"]
+    },
+    {
+      "name": "no_entry_uses_category",
+      "assets": { "ui.x": { "category": "ui" } },
+      "categoryFallbacks": { "ui": "ui.fallback" },
+      "request": "ui.x",
+      "expectedCandidates": ["ui.x", "ui.fallback", "fallback.universal.generated"]
+    },
+    {
+      "name": "category_target_own_fallback_is_NOT_recursed",
+      "assets": {
+        "building.a": { "category": "building" },
+        "tile.c": { "category": "tile", "fallbackAssetId": "tile.deep" }
+      },
+      "categoryFallbacks": { "building": "tile.c" },
+      "request": "building.a",
+      "expectedCandidates": ["building.a", "tile.c", "fallback.universal.generated"]
+    },
+    {
+      "name": "dedupe_entry_equals_category",
+      "assets": { "building.a": { "category": "building", "fallbackAssetId": "shared.fb" } },
+      "categoryFallbacks": { "building": "shared.fb" },
+      "request": "building.a",
+      "expectedCandidates": ["building.a", "shared.fb", "fallback.universal.generated"]
+    },
+    {
+      "name": "no_fallbacks_goes_straight_to_universal",
+      "assets": { "effect.x": { "category": "effect" } },
+      "categoryFallbacks": {},
+      "request": "effect.x",
+      "expectedCandidates": ["effect.x", "fallback.universal.generated"]
+    }
+  ]
+}
