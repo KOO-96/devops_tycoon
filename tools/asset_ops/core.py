@@ -41,6 +41,8 @@ APPROVAL_STATES: frozenset[str] = frozenset(
 PROD_LICENSE_TYPES: frozenset[str] = frozenset(
     {"company_owned", "commissioned", "commercial_license", "open_license", "generative_output"}
 )
+# Post-approval states that are never included in a NEW production manifest.
+EXCLUDED_TERMINAL_STATES: frozenset[str] = frozenset({"DEPRECATED", "REVOKED"})
 
 MAX_FALLBACK_HOPS = 3
 FRAME_NAME_RE = re.compile(r"^[a-z0-9]+(?:[-_][a-z0-9]+)*$")
@@ -62,9 +64,7 @@ class Severity(StrEnum):
 
 # Exception-waivable technical checks (rights/integrity checks are NEVER waivable).
 EXCEPTIONABLE_CHECKS: frozenset[str] = frozenset({"C15", "C16", "C17", "C18", "C26"})
-NEVER_EXCEPTIONABLE: frozenset[str] = frozenset(
-    {"C01", "C10", "C12", "C13", "C14", "C22", "C25"}
-)
+NEVER_EXCEPTIONABLE: frozenset[str] = frozenset({"C01", "C10", "C12", "C13", "C14", "C22", "C25"})
 
 
 @dataclass(frozen=True)

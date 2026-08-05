@@ -32,12 +32,23 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     sub = parser.add_subparsers(dest="command", required=True)
     v = sub.add_parser("validate", help="validate a workspace and emit a report")
-    v.add_argument("--workspace", required=True, type=Path,
-                   help="workspace root (assets/metadata, assets/generated, ...)")
-    v.add_argument("--report", type=Path, default=None,
-                   help="write the JSON report to this path (also printed to stdout)")
-    v.add_argument("--now", default=None,
-                   help="ISO-8601 reference time for exception expiry (default: current UTC)")
+    v.add_argument(
+        "--workspace",
+        required=True,
+        type=Path,
+        help="workspace root (assets/metadata, assets/generated, ...)",
+    )
+    v.add_argument(
+        "--report",
+        type=Path,
+        default=None,
+        help="write the JSON report to this path (also printed to stdout)",
+    )
+    v.add_argument(
+        "--now",
+        default=None,
+        help="ISO-8601 reference time for exception expiry (default: current UTC)",
+    )
     v.add_argument("--quiet", action="store_true", help="suppress the human summary on stderr")
     return parser
 
@@ -100,8 +111,13 @@ def _emit_error_report(args: argparse.Namespace, message: str, kind: str) -> Non
         "required_check": "asset-production-gate",
         "build_id": None,
         "status": "error",
-        "summary": {"errors": 0, "warnings": 0, "excluded": 0,
-                    "passed_checks": 0, "failed_checks": 0},
+        "summary": {
+            "errors": 0,
+            "warnings": 0,
+            "excluded": 0,
+            "passed_checks": 0,
+            "failed_checks": 0,
+        },
         "results": [],
         "error": {"kind": kind, "message": message},
     }

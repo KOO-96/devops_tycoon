@@ -69,11 +69,10 @@ class CheckContext:
             aid = rec.data.get("asset_id")
             if isinstance(aid, str):
                 by_id[aid].append(rec)
-            if (
-                rec.data.get("approval_state") == INCLUDABLE_STATE
-                and rec.data.get("production_approved") is True
-            ):
+            # Centralized inclusion predicate — no standalone rule duplicated here.
+            if canonical.is_production_includable(rec.data):
                 included.append(rec)
+        included.sort(key=lambda r: (str(r.data.get("asset_id")), str(r.data.get("asset_version"))))
         return cls(ws=ws, now=now, by_id=dict(by_id), included=included)
 
     def read_bytes(self, rel: str) -> bytes | None:
@@ -117,6 +116,7 @@ class CheckContext:
 
 # ---- field accessors -------------------------------------------------------
 
+
 def _str(d: dict[str, Any], key: str) -> str | None:
     v = d.get(key)
     return v if isinstance(v, str) else None
@@ -141,6 +141,7 @@ def _ver(rec: RawRecord) -> str | None:
 
 
 # ---- C01 schema ------------------------------------------------------------
+
 
 def c01_schema(ctx: CheckContext) -> list[Result]:
     out: list[Result] = []
@@ -205,6 +206,7 @@ def c01_schema(ctx: CheckContext) -> list[Result]:
 
 # ---- C02 duplicate assetId+version ----------------------------------------
 
+
 def c02_dup_asset_version(ctx: CheckContext) -> list[Result]:
     seen: dict[tuple[str, str], int] = defaultdict(int)
     for rec in ctx.ws.records:
@@ -228,6 +230,7 @@ def c02_dup_asset_version(ctx: CheckContext) -> list[Result]:
 
 
 # ---- C03 duplicate frame (atlas) ------------------------------------------
+
 
 def c03_dup_frame(ctx: CheckContext) -> list[Result]:
     """Two metadata records claiming the same (atlas identity, frame_name).
@@ -263,6 +266,7 @@ def c03_dup_frame(ctx: CheckContext) -> list[Result]:
 
 # ---- C04 source exists -----------------------------------------------------
 
+
 def c04_source_exists(ctx: CheckContext) -> list[Result]:
     out: list[Result] = []
     for rec in ctx.ws.records:
@@ -294,6 +298,7 @@ def c04_source_exists(ctx: CheckContext) -> list[Result]:
 
 # ---- C05 atlas JSON <-> image ---------------------------------------------
 
+
 def _load_atlas_json(ctx: CheckContext, rel: str) -> dict[str, Any] | None:
     data = ctx.read_bytes(rel)
     if data is None:
@@ -322,20 +327,34 @@ def c05_atlas_consistency(ctx: CheckContext) -> list[Result]:
         descriptor = _load_atlas_json(ctx, json_path)
         if descriptor is None:
             out.append(
-                err("C05", "ATLAS_INCONSISTENT", f"atlas descriptor missing/invalid: {json_path}",
-                    asset_id=aid, asset_version=ver, artifact_path=json_path)
+                err(
+                    "C05",
+                    "ATLAS_INCONSISTENT",
+                    f"atlas descriptor missing/invalid: {json_path}",
+                    asset_id=aid,
+                    asset_version=ver,
+                    artifact_path=json_path,
+                )
             )
             continue
         # image reference inside the descriptor must match metadata atlas_image_path
-        ref = descriptor.get("image") or descriptor.get("meta", {}).get("image") \
-            if isinstance(descriptor.get("meta"), dict) else descriptor.get("image")
+        ref = (
+            descriptor.get("image") or descriptor.get("meta", {}).get("image")
+            if isinstance(descriptor.get("meta"), dict)
+            else descriptor.get("image")
+        )
         img_basename = image_path.rsplit("/", 1)[-1]
         if isinstance(ref, str) and ref.rsplit("/", 1)[-1] != img_basename:
             out.append(
-                err("C05", "ASSET_ATLAS_IMAGE_REFERENCE_MISMATCH",
+                err(
+                    "C05",
+                    "ASSET_ATLAS_IMAGE_REFERENCE_MISMATCH",
                     f"descriptor image '{ref}' != metadata atlas_image_path '{image_path}'",
-                    asset_id=aid, asset_version=ver, artifact_path=json_path,
-                    details={"descriptor_image": ref, "metadata_image": image_path})
+                    asset_id=aid,
+                    asset_version=ver,
+                    artifact_path=json_path,
+                    details={"descriptor_image": ref, "metadata_image": image_path},
+                )
             )
         dims = ctx.dimensions(image_path)
         frames = descriptor.get("frames")
@@ -349,8 +368,14 @@ def c05_atlas_consistency(ctx: CheckContext) -> list[Result]:
         for name, fr in items:
             if name in seen_frames:
                 out.append(
-                    err("C05", "ATLAS_INCONSISTENT", f"duplicate frame '{name}' in {json_path}",
-                        asset_id=aid, asset_version=ver, artifact_path=json_path)
+                    err(
+                        "C05",
+                        "ATLAS_INCONSISTENT",
+                        f"duplicate frame '{name}' in {json_path}",
+                        asset_id=aid,
+                        asset_version=ver,
+                        artifact_path=json_path,
+                    )
                 )
             seen_frames.add(name)
             rect = fr.get("frame") if isinstance(fr, dict) else None
@@ -360,23 +385,34 @@ def c05_atlas_consistency(ctx: CheckContext) -> list[Result]:
                 w, h = _num(rect, "w") or 0.0, _num(rect, "h") or 0.0
                 if x < 0 or y < 0 or x + w > dims[0] or y + h > dims[1]:
                     out.append(
-                        err("C05", "ATLAS_INCONSISTENT",
+                        err(
+                            "C05",
+                            "ATLAS_INCONSISTENT",
                             f"frame '{name}' {int(x)},{int(y)},{int(w)},{int(h)} out of "
                             f"image bounds {dims[0]}x{dims[1]}",
-                            asset_id=aid, asset_version=ver, artifact_path=json_path,
-                            details={"frame": name, "image_size": list(dims)})
+                            asset_id=aid,
+                            asset_version=ver,
+                            artifact_path=json_path,
+                            details={"frame": name, "image_size": list(dims)},
+                        )
                     )
         if isinstance(frame_name, str) and frame_name not in seen_frames:
             out.append(
-                err("C05", "ATLAS_INCONSISTENT",
+                err(
+                    "C05",
+                    "ATLAS_INCONSISTENT",
                     f"metadata frame '{frame_name}' not present in descriptor {json_path}",
-                    asset_id=aid, asset_version=ver, artifact_path=json_path,
-                    details={"frame": frame_name})
+                    asset_id=aid,
+                    asset_version=ver,
+                    artifact_path=json_path,
+                    details={"frame": frame_name},
+                )
             )
     return out
 
 
 # ---- C06 frame-name convention --------------------------------------------
+
 
 def c06_frame_name(ctx: CheckContext) -> list[Result]:
     out: list[Result] = []
@@ -387,14 +423,20 @@ def c06_frame_name(ctx: CheckContext) -> list[Result]:
         frame = src.get("frame")
         if isinstance(frame, str) and not FRAME_NAME_RE.match(frame):
             out.append(
-                err("C06", "FRAME_NAME_INVALID",
+                err(
+                    "C06",
+                    "FRAME_NAME_INVALID",
                     f"frame name '{frame}' violates convention [a-z0-9]([-_][a-z0-9])*",
-                    asset_id=_aid(rec), asset_version=_ver(rec), details={"frame": frame})
+                    asset_id=_aid(rec),
+                    asset_version=_ver(rec),
+                    details={"frame": frame},
+                )
             )
     return out
 
 
 # ---- C07 anchor range ------------------------------------------------------
+
 
 def c07_anchor_range(ctx: CheckContext) -> list[Result]:
     out: list[Result] = []
@@ -406,13 +448,19 @@ def c07_anchor_range(ctx: CheckContext) -> list[Result]:
             v = _num(anchor, axis)
             if v is None or v < 0.0 or v > 1.0:
                 out.append(
-                    err("C07", "ANCHOR_RANGE", f"anchor.{axis}={anchor.get(axis)} not in [0,1]",
-                        asset_id=_aid(rec), asset_version=_ver(rec))
+                    err(
+                        "C07",
+                        "ANCHOR_RANGE",
+                        f"anchor.{axis}={anchor.get(axis)} not in [0,1]",
+                        asset_id=_aid(rec),
+                        asset_version=_ver(rec),
+                    )
                 )
     return out
 
 
 # ---- C08 footprint range ---------------------------------------------------
+
 
 def c08_footprint_range(ctx: CheckContext) -> list[Result]:
     out: list[Result] = []
@@ -424,14 +472,78 @@ def c08_footprint_range(ctx: CheckContext) -> list[Result]:
             v = fp.get(dim)
             if not isinstance(v, int) or isinstance(v, bool) or v < 1 or v > 4:
                 out.append(
-                    err("C08", "FOOTPRINT_RANGE",
+                    err(
+                        "C08",
+                        "FOOTPRINT_RANGE",
                         f"footprint.{dim}={v} not an integer in 1..4",
-                        asset_id=_aid(rec), asset_version=_ver(rec))
+                        asset_id=_aid(rec),
+                        asset_version=_ver(rec),
+                    )
                 )
     return out
 
 
+# ---- manifest categoryFallbacks helpers -----------------------------------
+# The runtime manifest carries `categoryFallbacks: Partial<Record<AssetCategory,
+# assetId>>` (metadata-policy §10c). C09/C10/C11 validate the *combined* fallback
+# graph over three edge kinds, resolved in this order:
+#   1. Entry:     assetId -> entry.fallbackAssetId          (when present)
+#   2. Category:  assetId -> categoryFallbacks[category]     (when no entry fb)
+#   3. Universal: terminal (no outgoing edge)
+# A "hop" is one traversal of an Entry-or-Category edge; the Universal terminal is
+# NOT an edge and is never counted as a cycle. Max chain depth is MAX_FALLBACK_HOPS.
+
+
+def _manifest_asset_index(ctx: CheckContext) -> dict[str, dict[str, Any]]:
+    manifest = ctx.ws.manifest or {}
+    assets = manifest.get("assets")
+    out: dict[str, dict[str, Any]] = {}
+    if isinstance(assets, list):
+        for e in assets:
+            if isinstance(e, dict) and isinstance(e.get("assetId"), str):
+                out[e["assetId"]] = e
+    return out
+
+
+def _category_fallbacks(ctx: CheckContext) -> Any:
+    return (ctx.ws.manifest or {}).get("categoryFallbacks")
+
+
+def _combined_fallback_edges(ctx: CheckContext) -> dict[str, str | None]:
+    """asset_id -> resolved fallback (entry fb, else category fb, else None terminal)."""
+    assets = _manifest_asset_index(ctx)
+    catfb = _category_fallbacks(ctx)
+    catfb = catfb if isinstance(catfb, dict) else {}
+    edges: dict[str, str | None] = {}
+    for aid, entry in assets.items():
+        fb = entry.get("fallbackAssetId")
+        if isinstance(fb, str) and fb:
+            edges[aid] = fb
+            continue
+        cat = entry.get("category")
+        cfb = catfb.get(cat) if isinstance(cat, str) else None
+        edges[aid] = cfb if isinstance(cfb, str) and cfb else None
+    return edges
+
+
+def _chain_hops(edges: dict[str, str | None], start: str) -> int:
+    hops = 0
+    node: str | None = start
+    visited: set[str] = {start}
+    while isinstance(node, str) and node in edges:
+        nxt = edges.get(node)
+        if not isinstance(nxt, str):
+            break  # terminal
+        hops += 1
+        if nxt in visited:
+            break  # cycle — reported by C10, not depth
+        visited.add(nxt)
+        node = nxt
+    return hops
+
+
 # ---- C09 fallback exists ---------------------------------------------------
+
 
 def c09_fallback_exists(ctx: CheckContext) -> list[Result]:
     out: list[Result] = []
@@ -440,13 +552,111 @@ def c09_fallback_exists(ctx: CheckContext) -> list[Result]:
         fb = _str(rec.data, "fallback_asset_id")
         if fb and fb not in ids:
             out.append(
-                err("C09", "FALLBACK_MISSING", f"fallback_asset_id '{fb}' does not resolve",
-                    asset_id=_aid(rec), asset_version=_ver(rec), details={"fallback": fb})
+                err(
+                    "C09",
+                    "FALLBACK_MISSING",
+                    f"fallback_asset_id '{fb}' does not resolve",
+                    asset_id=_aid(rec),
+                    asset_version=_ver(rec),
+                    details={"fallback": fb},
+                )
+            )
+    out.extend(_c09_category_fallbacks(ctx))
+    return out
+
+
+def _c09_category_fallbacks(ctx: CheckContext) -> list[Result]:
+    """Manifest categoryFallbacks: key validity + target existence/inclusion."""
+    if ctx.ws.manifest is None:
+        return []
+    catfb = _category_fallbacks(ctx)
+    if catfb is None:
+        return []  # optional field absent
+    if not isinstance(catfb, dict):
+        return [
+            err(
+                "C09",
+                "ASSET_CATEGORY_FALLBACK_INVALID_KEY",
+                "manifest categoryFallbacks must be an object",
+                artifact_path="categoryFallbacks",
+            )
+        ]
+    assets = _manifest_asset_index(ctx)
+    included_ids = {r.data.get("asset_id") for r in ctx.included}
+    includable_by_id: dict[str, bool] = {}
+    state_by_id: dict[str, str | None] = {}
+    for rec in ctx.ws.records:
+        aid = _aid(rec)
+        if aid is None:
+            continue
+        includable_by_id[aid] = includable_by_id.get(
+            aid, False
+        ) or canonical.is_production_includable(rec.data)
+        state_by_id.setdefault(aid, _str(rec.data, "approval_state"))
+    out: list[Result] = []
+    for key in sorted(catfb):
+        loc = f"categoryFallbacks.{key}"
+        target = catfb[key]
+        if key not in RUNTIME_CATEGORIES:
+            out.append(
+                err(
+                    "C09",
+                    "ASSET_CATEGORY_FALLBACK_INVALID_KEY",
+                    f"categoryFallbacks key '{key}' is not a runtime AssetCategory",
+                    artifact_path=loc,
+                    details={"key": key},
+                )
+            )
+            continue
+        if not isinstance(target, str) or not target:
+            out.append(
+                err(
+                    "C09",
+                    "ASSET_CATEGORY_FALLBACK_TARGET_MISSING",
+                    f"categoryFallbacks['{key}'] target is not a valid assetId",
+                    artifact_path=loc,
+                    details={"key": key},
+                )
+            )
+            continue
+        if target in includable_by_id and not includable_by_id[target]:
+            out.append(
+                err(
+                    "C09",
+                    "ASSET_CATEGORY_FALLBACK_TARGET_EXCLUDED",
+                    f"categoryFallbacks['{key}'] -> '{target}' is an excluded asset "
+                    f"(state {state_by_id.get(target)})",
+                    artifact_path=loc,
+                    details={"key": key, "target": target, "state": state_by_id.get(target)},
+                )
+            )
+            continue
+        if target not in assets:
+            out.append(
+                err(
+                    "C09",
+                    "ASSET_CATEGORY_FALLBACK_TARGET_MISSING",
+                    f"categoryFallbacks['{key}'] -> '{target}' is not in manifest assets",
+                    artifact_path=loc,
+                    details={"key": key, "target": target},
+                )
+            )
+            continue
+        if target not in included_ids:
+            out.append(
+                err(
+                    "C09",
+                    "ASSET_CATEGORY_FALLBACK_TARGET_EXCLUDED",
+                    f"categoryFallbacks['{key}'] -> '{target}' is not in the approved included set",
+                    artifact_path=loc,
+                    details={"key": key, "target": target},
+                )
             )
     return out
 
 
 # ---- C10 fallback cycle / C11 fallback depth ------------------------------
+
 
 def _fallback_edges(ctx: CheckContext) -> dict[str, str]:
     edges: dict[str, str] = {}
@@ -465,11 +675,47 @@ def c10_fallback_cycle(ctx: CheckContext) -> list[Result]:
         node: str | None = start
         while node is not None and node in edges:
             if node in seen:
-                cycle = seen[seen.index(node):] + [node]
+                cycle = seen[seen.index(node) :] + [node]
                 out.append(
-                    err("C10", "FALLBACK_CYCLE", "fallback cycle: " + " -> ".join(cycle),
-                        asset_id=start, details={"cycle": cycle})
+                    err(
+                        "C10",
+                        "FALLBACK_CYCLE",
+                        "fallback cycle: " + " -> ".join(cycle),
+                        asset_id=start,
+                        details={"cycle": cycle},
+                    )
                 )
+                break
+            seen.append(node)
+            node = edges.get(node)
+    out.extend(_c10_category_cycle(ctx))
+    return out
+
+
+def _c10_category_cycle(ctx: CheckContext) -> list[Result]:
+    if ctx.ws.manifest is None:
+        return []
+    edges = _combined_fallback_edges(ctx)
+    out: list[Result] = []
+    reported: set[tuple[str, ...]] = set()
+    for start in sorted(edges):
+        seen: list[str] = []
+        node: str | None = start
+        while isinstance(node, str) and node in edges:
+            if node in seen:
+                cycle = seen[seen.index(node) :] + [node]
+                key = tuple(sorted(set(cycle)))
+                if key not in reported:
+                    reported.add(key)
+                    out.append(
+                        err(
+                            "C10",
+                            "ASSET_CATEGORY_FALLBACK_CYCLE",
+                            "combined fallback cycle: " + " -> ".join(cycle),
+                            artifact_path="categoryFallbacks",
+                            details={"cycle": cycle},
+                        )
+                    )
                 break
             seen.append(node)
             node = edges.get(node)
@@ -491,15 +737,42 @@ def c11_fallback_depth(ctx: CheckContext) -> list[Result]:
             hops += 1
             if hops > MAX_FALLBACK_HOPS:
                 out.append(
-                    err("C11", "FALLBACK_DEPTH",
+                    err(
+                        "C11",
+                        "FALLBACK_DEPTH",
                         f"fallback chain from '{start}' exceeds {MAX_FALLBACK_HOPS} hops",
-                        asset_id=start, details={"hops": hops})
+                        asset_id=start,
+                        details={"hops": hops},
+                    )
                 )
                 break
+    out.extend(_c11_category_depth(ctx))
+    return out
+
+
+def _c11_category_depth(ctx: CheckContext) -> list[Result]:
+    if ctx.ws.manifest is None:
+        return []
+    edges = _combined_fallback_edges(ctx)
+    out: list[Result] = []
+    for start in sorted(edges):
+        hops = _chain_hops(edges, start)
+        if hops > MAX_FALLBACK_HOPS:
+            out.append(
+                err(
+                    "C11",
+                    "ASSET_CATEGORY_FALLBACK_DEPTH_EXCEEDED",
+                    f"combined fallback chain from '{start}' exceeds {MAX_FALLBACK_HOPS} hops",
+                    asset_id=start,
+                    artifact_path="categoryFallbacks",
+                    details={"hops": hops},
+                )
+            )
     return out
 
 
 # ---- C12 checksum integrity -----------------------------------------------
+
 
 def c12_checksum(ctx: CheckContext) -> list[Result]:
     out: list[Result] = []
@@ -524,24 +797,47 @@ def c12_checksum(ctx: CheckContext) -> list[Result]:
 
 
 def _verify(
-    ctx: CheckContext, out: list[Result], check: str, code: str,
-    aid: str | None, ver: str | None, path: str, declared: str,
+    ctx: CheckContext,
+    out: list[Result],
+    check: str,
+    code: str,
+    aid: str | None,
+    ver: str | None,
+    path: str,
+    declared: str,
 ) -> None:
     if not is_valid_checksum(declared):
-        out.append(err(check, code, f"checksum for {path} is not a 64-hex sha256",
-                       asset_id=aid, asset_version=ver, artifact_path=path))
+        out.append(
+            err(
+                check,
+                code,
+                f"checksum for {path} is not a 64-hex sha256",
+                asset_id=aid,
+                asset_version=ver,
+                artifact_path=path,
+            )
+        )
         return
     data = ctx.read_bytes(path)
     if data is None:
         return  # C04 reports the missing binary
     actual = sha256_hex(data)
     if actual != normalize_checksum(declared):
-        out.append(err(check, code, f"checksum mismatch for {path}",
-                       asset_id=aid, asset_version=ver, artifact_path=path,
-                       details={"declared": normalize_checksum(declared), "actual": actual}))
+        out.append(
+            err(
+                check,
+                code,
+                f"checksum mismatch for {path}",
+                asset_id=aid,
+                asset_version=ver,
+                artifact_path=path,
+                details={"declared": normalize_checksum(declared), "actual": actual},
+            )
+        )
 
 
 # ---- C13 license -----------------------------------------------------------
+
 
 def c13_license(ctx: CheckContext) -> list[Result]:
     out: list[Result] = []
@@ -550,29 +846,43 @@ def c13_license(ctx: CheckContext) -> list[Result]:
         aid, ver = _aid(rec), _ver(rec)
         if lt is None or lt == "unknown" or lt not in PROD_LICENSE_TYPES:
             out.append(
-                err("C13", "LICENSE_INVALID",
+                err(
+                    "C13",
+                    "LICENSE_INVALID",
                     f"license_type '{lt}' is not a valid production license",
-                    asset_id=aid, asset_version=ver, details={"license_type": lt})
+                    asset_id=aid,
+                    asset_version=ver,
+                    details={"license_type": lt},
+                )
             )
             continue
         if not _str(rec.data, "license_reference"):
             out.append(
-                err("C13", "LICENSE_INVALID",
+                err(
+                    "C13",
+                    "LICENSE_INVALID",
                     f"license_type '{lt}' requires license_reference evidence",
-                    asset_id=aid, asset_version=ver)
+                    asset_id=aid,
+                    asset_version=ver,
+                )
             )
         if lt == "generative_output":
             prov = _obj(rec.data, "source_provenance") or {}
             if not _str(prov, "prompt_hash") or prov.get("human_reviewed") is not True:
                 out.append(
-                    err("C13", "LICENSE_INVALID",
+                    err(
+                        "C13",
+                        "LICENSE_INVALID",
                         "generative_output requires prompt_hash + human_reviewed=true",
-                        asset_id=aid, asset_version=ver)
+                        asset_id=aid,
+                        asset_version=ver,
+                    )
                 )
     return out
 
 
 # ---- C14 production approval -----------------------------------------------
+
 
 def c14_approval(ctx: CheckContext) -> list[Result]:
     out: list[Result] = []
@@ -584,35 +894,55 @@ def c14_approval(ctx: CheckContext) -> list[Result]:
         # boolean must match state (subordinate invariant)
         if (state == INCLUDABLE_STATE) != (approved is True):
             out.append(
-                err("C14", "APPROVAL_INVALID",
+                err(
+                    "C14",
+                    "APPROVAL_INVALID",
                     f"production_approved={approved} inconsistent with approval_state={state}",
-                    asset_id=aid, asset_version=ver)
+                    asset_id=aid,
+                    asset_version=ver,
+                )
             )
         if state != INCLUDABLE_STATE:
             continue
         approval = _obj(d, "approval") or {}
         missing = [
-            f for f in ("reviewed_asset_version", "approved_by", "approved_at",
-                        "rights_review_reference", "technical_review_reference")
+            f
+            for f in (
+                "reviewed_asset_version",
+                "approved_by",
+                "approved_at",
+                "rights_review_reference",
+                "technical_review_reference",
+            )
             if not _str(approval, f)
         ]
         if missing:
             out.append(
-                err("C14", "APPROVAL_INVALID",
+                err(
+                    "C14",
+                    "APPROVAL_INVALID",
                     f"APPROVED_FOR_PRODUCTION missing approval fields: {', '.join(missing)}",
-                    asset_id=aid, asset_version=ver, details={"missing": missing})
+                    asset_id=aid,
+                    asset_version=ver,
+                    details={"missing": missing},
+                )
             )
         elif approval.get("reviewed_asset_version") != ver:
             out.append(
-                err("C14", "APPROVAL_INVALID",
+                err(
+                    "C14",
+                    "APPROVAL_INVALID",
                     f"approval bound to version '{approval.get('reviewed_asset_version')}' "
                     f"but asset_version is '{ver}'",
-                    asset_id=aid, asset_version=ver)
+                    asset_id=aid,
+                    asset_version=ver,
+                )
             )
     return out
 
 
 # ---- C15 texture dimension -------------------------------------------------
+
 
 def c15_texture_dimension(ctx: CheckContext) -> list[Result]:
     out: list[Result] = []
@@ -629,20 +959,31 @@ def c15_texture_dimension(ctx: CheckContext) -> list[Result]:
         aid, ver = _aid(rec), _ver(rec)
         if max(w, h) > TEXTURE_HARD_MAX:
             wid = ctx.waiver_for(aid, ver, "C15")
-            res = err("C15", "TEXTURE_DIMENSION",
-                      f"texture {w}x{h} exceeds hard-max {TEXTURE_HARD_MAX}",
-                      asset_id=aid, asset_version=ver, artifact_path=path)
+            res = err(
+                "C15",
+                "TEXTURE_DIMENSION",
+                f"texture {w}x{h} exceeds hard-max {TEXTURE_HARD_MAX}",
+                asset_id=aid,
+                asset_version=ver,
+                artifact_path=path,
+            )
             out.append(_maybe_waive(res, wid))
         elif max(w, h) > TEXTURE_RECOMMENDED:
             out.append(
-                warn("C15", "TEXTURE_DIMENSION",
-                     f"texture {w}x{h} exceeds recommended {TEXTURE_RECOMMENDED} (<= hard-max)",
-                     asset_id=aid, asset_version=ver, artifact_path=path)
+                warn(
+                    "C15",
+                    "TEXTURE_DIMENSION",
+                    f"texture {w}x{h} exceeds recommended {TEXTURE_RECOMMENDED} (<= hard-max)",
+                    asset_id=aid,
+                    asset_version=ver,
+                    artifact_path=path,
+                )
             )
     return out
 
 
 # ---- C16 atlas dimension ---------------------------------------------------
+
 
 def _is_pot(n: int) -> bool:
     return n > 0 and (n & (n - 1)) == 0
@@ -664,18 +1005,35 @@ def c16_atlas_dimension(ctx: CheckContext) -> list[Result]:
         aid, ver = _aid(rec), _ver(rec)
         if max(w, h) > TEXTURE_HARD_MAX:
             wid = ctx.waiver_for(aid, ver, "C16")
-            out.append(_maybe_waive(
-                err("C16", "ATLAS_DIMENSION", f"atlas {w}x{h} exceeds hard-max {TEXTURE_HARD_MAX}",
-                    asset_id=aid, asset_version=ver, artifact_path=path), wid))
+            out.append(
+                _maybe_waive(
+                    err(
+                        "C16",
+                        "ATLAS_DIMENSION",
+                        f"atlas {w}x{h} exceeds hard-max {TEXTURE_HARD_MAX}",
+                        asset_id=aid,
+                        asset_version=ver,
+                        artifact_path=path,
+                    ),
+                    wid,
+                )
+            )
         elif not (_is_pot(w) and _is_pot(h)):
             out.append(
-                warn("C16", "ATLAS_DIMENSION", f"atlas {w}x{h} SHOULD be power-of-two",
-                     asset_id=aid, asset_version=ver, artifact_path=path)
+                warn(
+                    "C16",
+                    "ATLAS_DIMENSION",
+                    f"atlas {w}x{h} SHOULD be power-of-two",
+                    asset_id=aid,
+                    asset_version=ver,
+                    artifact_path=path,
+                )
             )
     return out
 
 
 # ---- C17 bundle transfer size ----------------------------------------------
+
 
 def _critical_bundles(ctx: CheckContext) -> set[str]:
     cfg = ctx.ws.bundle_config or {}
@@ -703,11 +1061,19 @@ def c17_bundle_size(ctx: CheckContext) -> list[Result]:
         total = sizes.get(bundle, 0)
         if total > CRITICAL_TRANSFER_BYTES:
             wid = _waiver_any(ctx, bundle, "C17")
-            out.append(_maybe_waive(
-                err("C17", "BUNDLE_SIZE",
-                    f"critical bundle '{bundle}' transfer {total} B exceeds "
-                    f"{CRITICAL_TRANSFER_BYTES} B budget",
-                    artifact_path=bundle, details={"bytes": total}), wid))
+            out.append(
+                _maybe_waive(
+                    err(
+                        "C17",
+                        "BUNDLE_SIZE",
+                        f"critical bundle '{bundle}' transfer {total} B exceeds "
+                        f"{CRITICAL_TRANSFER_BYTES} B budget",
+                        artifact_path=bundle,
+                        details={"bytes": total},
+                    ),
+                    wid,
+                )
+            )
     return out
 
 
@@ -725,16 +1091,20 @@ def _artifact_paths(rec: RawRecord) -> list[str]:
 
 def _waiver_any(ctx: CheckContext, key: str, check: str) -> str | None:
     for exc in ctx.ws.exceptions:
-        if exc.get("check_id") == check and exc.get("asset_id") == key \
-                and exc.get("status") == "active" \
-                and isinstance(exc.get("approved_by"), str) \
-                and exc["approved_by"].strip().lower() == "devcto":
+        if (
+            exc.get("check_id") == check
+            and exc.get("asset_id") == key
+            and exc.get("status") == "active"
+            and isinstance(exc.get("approved_by"), str)
+            and exc["approved_by"].strip().lower() == "devcto"
+        ):
             eid = exc.get("exception_id")
             return eid if isinstance(eid, str) else "unknown"
     return None
 
 
 # ---- C18 GPU memory --------------------------------------------------------
+
 
 def c18_gpu_memory(ctx: CheckContext) -> list[Result]:
     out: list[Result] = []
@@ -753,13 +1123,23 @@ def c18_gpu_memory(ctx: CheckContext) -> list[Result]:
         if _str(rec.data, "bundle") in critical:
             critical_total += mem
     if critical and critical_total > CRITICAL_GPU_BYTES:
-        out.append(err("C18", "GPU_MEMORY",
-                       f"critical GPU memory {critical_total} B exceeds {CRITICAL_GPU_BYTES} B",
-                       details={"bytes": critical_total}))
+        out.append(
+            err(
+                "C18",
+                "GPU_MEMORY",
+                f"critical GPU memory {critical_total} B exceeds {CRITICAL_GPU_BYTES} B",
+                details={"bytes": critical_total},
+            )
+        )
     if resident_total > RESIDENT_GPU_BYTES:
-        out.append(err("C18", "GPU_MEMORY",
-                       f"resident GPU memory {resident_total} B exceeds {RESIDENT_GPU_BYTES} B",
-                       details={"bytes": resident_total}))
+        out.append(
+            err(
+                "C18",
+                "GPU_MEMORY",
+                f"resident GPU memory {resident_total} B exceeds {RESIDENT_GPU_BYTES} B",
+                details={"bytes": resident_total},
+            )
+        )
     return out
 
 
@@ -774,6 +1154,7 @@ def _image_for_memory(rec: RawRecord) -> str | None:
 
 
 # ---- C19 unused manifest entry / C20 unmanifested runtime asset ------------
+
 
 def _manifest_ids(ctx: CheckContext) -> set[str]:
     manifest = ctx.ws.manifest or {}
@@ -793,9 +1174,14 @@ def c19_unused_entry(ctx: CheckContext) -> list[Result]:
     out: list[Result] = []
     for aid in sorted(_manifest_ids(ctx)):
         if aid not in refs:
-            out.append(warn("C19", "UNUSED_ENTRY",
-                            f"manifest asset '{aid}' is not referenced by any runtime kind",
-                            asset_id=aid))
+            out.append(
+                warn(
+                    "C19",
+                    "UNUSED_ENTRY",
+                    f"manifest asset '{aid}' is not referenced by any runtime kind",
+                    asset_id=aid,
+                )
+            )
     return out
 
 
@@ -806,13 +1192,19 @@ def c20_unmanifested(ctx: CheckContext) -> list[Result]:
     out: list[Result] = []
     for aid in sorted(set(ctx.ws.runtime_refs)):
         if aid not in manifest_ids:
-            out.append(err("C20", "UNMANIFESTED_ASSET",
-                           f"runtime-needed asset '{aid}' is absent from the manifest",
-                           asset_id=aid))
+            out.append(
+                err(
+                    "C20",
+                    "UNMANIFESTED_ASSET",
+                    f"runtime-needed asset '{aid}' is absent from the manifest",
+                    asset_id=aid,
+                )
+            )
     return out
 
 
 # ---- C21 metadata <-> manifest mapping ------------------------------------
+
 
 def c21_mapping(ctx: CheckContext) -> list[Result]:
     if ctx.ws.manifest is None:
@@ -821,8 +1213,11 @@ def c21_mapping(ctx: CheckContext) -> list[Result]:
     assets = ctx.ws.manifest.get("assets")
     if isinstance(assets, list):
         for e in assets:
-            if isinstance(e, dict) and isinstance(e.get("assetId"), str) \
-                    and isinstance(e.get("assetVersion"), str):
+            if (
+                isinstance(e, dict)
+                and isinstance(e.get("assetId"), str)
+                and isinstance(e.get("assetVersion"), str)
+            ):
                 entries[f"{e['assetId']}@{e['assetVersion']}"] = e
     out: list[Result] = []
     for rec in ctx.included:
@@ -831,20 +1226,40 @@ def c21_mapping(ctx: CheckContext) -> list[Result]:
         expected = canonical.metadata_to_entry(rec.data)
         actual = entries.get(key)
         if actual is None:
-            out.append(err("C21", "MAPPING_MISMATCH",
-                           f"approved asset {key} has no manifest entry",
-                           asset_id=aid, asset_version=ver))
+            out.append(
+                err(
+                    "C21",
+                    "MAPPING_MISMATCH",
+                    f"approved asset {key} has no manifest entry",
+                    asset_id=aid,
+                    asset_version=ver,
+                )
+            )
             continue
         leaked = sorted(set(actual) & canonical.GOVERNANCE_EXCLUDED_MANIFEST_FIELDS)
         if leaked:
-            out.append(err("C21", "MAPPING_MISMATCH",
-                           f"manifest entry {key} leaks governance fields: {', '.join(leaked)}",
-                           asset_id=aid, asset_version=ver, details={"leaked": leaked}))
+            out.append(
+                err(
+                    "C21",
+                    "MAPPING_MISMATCH",
+                    f"manifest entry {key} leaks governance fields: {', '.join(leaked)}",
+                    asset_id=aid,
+                    asset_version=ver,
+                    details={"leaked": leaked},
+                )
+            )
         diffs = _entry_diffs(expected, actual)
         if diffs:
-            out.append(err("C21", "MAPPING_MISMATCH",
-                           f"manifest entry {key} differs from mapping: {', '.join(diffs)}",
-                           asset_id=aid, asset_version=ver, details={"diffs": diffs}))
+            out.append(
+                err(
+                    "C21",
+                    "MAPPING_MISMATCH",
+                    f"manifest entry {key} differs from mapping: {', '.join(diffs)}",
+                    asset_id=aid,
+                    asset_version=ver,
+                    details={"diffs": diffs},
+                )
+            )
     return out
 
 
@@ -861,6 +1276,7 @@ def _entry_diffs(expected: dict[str, Any], actual: dict[str, Any]) -> list[str]:
 
 # ---- C22 deterministic generation -----------------------------------------
 
+
 def c22_deterministic(ctx: CheckContext) -> list[Result]:
     if ctx.ws.manifest is None or ctx.ws.manifest_path is None:
         return []
@@ -869,14 +1285,20 @@ def c22_deterministic(ctx: CheckContext) -> list[Result]:
         return []
     expected = canonical.canonical_manifest_bytes(ctx.ws.manifest)
     if raw != expected:
-        return [err("C22", "NONDETERMINISTIC",
-                    "committed manifest is not in canonical byte-stable form "
-                    "(hand-edited or non-conforming generator)",
-                    artifact_path=ctx.ws.manifest_path)]
+        return [
+            err(
+                "C22",
+                "NONDETERMINISTIC",
+                "committed manifest is not in canonical byte-stable form "
+                "(hand-edited or non-conforming generator)",
+                artifact_path=ctx.ws.manifest_path,
+            )
+        ]
     return []
 
 
 # ---- C23 bundle dependency cycle ------------------------------------------
+
 
 def c23_bundle_cycle(ctx: CheckContext) -> list[Result]:
     cfg = ctx.ws.bundle_config or {}
@@ -893,9 +1315,15 @@ def c23_bundle_cycle(ctx: CheckContext) -> list[Result]:
         color[node] = 1
         for nxt in graph.get(node, []):
             if color.get(nxt) == 1:
-                cyc = stack[stack.index(nxt):] + [nxt] if nxt in stack else [node, nxt]
-                out.append(err("C23", "BUNDLE_CYCLE", "bundle cycle: " + " -> ".join(cyc),
-                               details={"cycle": cyc}))
+                cyc = stack[stack.index(nxt) :] + [nxt] if nxt in stack else [node, nxt]
+                out.append(
+                    err(
+                        "C23",
+                        "BUNDLE_CYCLE",
+                        "bundle cycle: " + " -> ".join(cyc),
+                        details={"cycle": cyc},
+                    )
+                )
             elif color.get(nxt) is None:
                 visit(nxt, stack + [nxt])
         color[node] = 2
@@ -909,37 +1337,57 @@ def c23_bundle_cycle(ctx: CheckContext) -> list[Result]:
         aid, bundle = _aid(rec), _str(rec.data, "bundle")
         if aid and bundle:
             if aid in owner and owner[aid] != bundle:
-                out.append(err("C23", "BUNDLE_CYCLE",
-                               f"asset '{aid}' owned by multiple bundles: {owner[aid]}, {bundle}",
-                               asset_id=aid))
+                out.append(
+                    err(
+                        "C23",
+                        "BUNDLE_CYCLE",
+                        f"asset '{aid}' owned by multiple bundles: {owner[aid]}, {bundle}",
+                        asset_id=aid,
+                    )
+                )
             owner.setdefault(aid, bundle)
     return out
 
 
 # ---- C24 build-id consistency ---------------------------------------------
 
+
 def c24_build_id(ctx: CheckContext) -> list[Result]:
     bm = ctx.ws.build_metadata
     if bm is None:
         if ctx.included:
-            return [err("C24", "BUILD_ID_MISMATCH",
-                        "approved assets exist but no build-metadata (build_id) is present")]
+            return [
+                err(
+                    "C24",
+                    "BUILD_ID_MISMATCH",
+                    "approved assets exist but no build-metadata (build_id) is present",
+                )
+            ]
         return []
     schema_v = _str(bm, "schema_version") or ""
     gen_v = _str(bm, "generator_version") or ""
     cfg_v = _str(bm, "generator_config_version") or ""
     expected = canonical.compute_build_id(
         [r.data for r in ctx.included],
-        schema_version=schema_v, generator_version=gen_v, generator_config_version=cfg_v)
+        schema_version=schema_v,
+        generator_version=gen_v,
+        generator_config_version=cfg_v,
+    )
     declared = _str(bm, "build_id")
     if declared != expected:
-        return [err("C24", "BUILD_ID_MISMATCH",
-                    "build_id does not match the canonical envelope of included assets",
-                    details={"declared": declared, "expected": expected})]
+        return [
+            err(
+                "C24",
+                "BUILD_ID_MISMATCH",
+                "build_id does not match the canonical envelope of included assets",
+                details={"declared": declared, "expected": expected},
+            )
+        ]
     return []
 
 
 # ---- C25 rollback artifact -------------------------------------------------
+
 
 def c25_rollback(ctx: CheckContext) -> list[Result]:
     out: list[Result] = []
@@ -951,8 +1399,13 @@ def c25_rollback(ctx: CheckContext) -> list[Result]:
     index = ctx.ws.rollback_index
     if index is None:
         if ctx.included:
-            out.append(err("C25", "ROLLBACK_MISSING",
-                           "approved assets exist but no rollback index is present"))
+            out.append(
+                err(
+                    "C25",
+                    "ROLLBACK_MISSING",
+                    "approved assets exist but no rollback index is present",
+                )
+            )
         return out
     candidates = index.get("candidates")
     if not isinstance(candidates, list) or not candidates:
@@ -971,19 +1424,30 @@ def c25_rollback(ctx: CheckContext) -> list[Result]:
                     revoked.append(str(a.get("asset_id")))
         eligible = cand.get("eligible") is True
         if revoked:
-            out.append(err("C25", "ASSET_ROLLBACK_REVOKED_TARGET",
-                           f"rollback candidate '{label}' reactivates REVOKED asset(s): "
-                           f"{', '.join(sorted(set(revoked)))}",
-                           details={"candidate": label, "revoked": sorted(set(revoked))}))
+            out.append(
+                err(
+                    "C25",
+                    "ASSET_ROLLBACK_REVOKED_TARGET",
+                    f"rollback candidate '{label}' reactivates REVOKED asset(s): "
+                    f"{', '.join(sorted(set(revoked)))}",
+                    details={"candidate": label, "revoked": sorted(set(revoked))},
+                )
+            )
         elif eligible:
             safe_exists = True
     if not safe_exists:
-        out.append(err("C25", "ROLLBACK_MISSING",
-                       "no safe (no-REVOKED, eligible) rollback candidate exists"))
+        out.append(
+            err(
+                "C25",
+                "ROLLBACK_MISSING",
+                "no safe (no-REVOKED, eligible) rollback candidate exists",
+            )
+        )
     return out
 
 
 # ---- C26 stale-version retention ------------------------------------------
+
 
 def c26_stale_retention(ctx: CheckContext) -> list[Result]:
     out: list[Result] = []
@@ -992,10 +1456,18 @@ def c26_stale_retention(ctx: CheckContext) -> list[Result]:
         retained = [r for r in versions if _str(r.data, "approval_state") != "REVOKED"]
         if len(retained) > STALE_RETENTION_MAX:
             wid = _waiver_any(ctx, aid, "C26")
-            out.append(_maybe_waive(
-                err("C26", "STALE_RETENTION",
-                    f"asset '{aid}' retains {len(retained)} versions (> {STALE_RETENTION_MAX})",
-                    asset_id=aid, details={"retained": len(retained)}), wid))
+            out.append(
+                _maybe_waive(
+                    err(
+                        "C26",
+                        "STALE_RETENTION",
+                        f"asset '{aid}' retains {len(retained)} versions (> {STALE_RETENTION_MAX})",
+                        asset_id=aid,
+                        details={"retained": len(retained)},
+                    ),
+                    wid,
+                )
+            )
     return out
 
 
