@@ -485,13 +485,14 @@ def c08_footprint_range(ctx: CheckContext) -> list[Result]:
 
 # ---- manifest categoryFallbacks helpers -----------------------------------
 # The runtime manifest carries `categoryFallbacks: Partial<Record<AssetCategory,
-# assetId>>` (metadata-policy §10c). C09/C10/C11 validate the *combined* fallback
-# graph over three edge kinds, resolved in this order:
-#   1. Entry:     assetId -> entry.fallbackAssetId          (when present)
-#   2. Category:  assetId -> categoryFallbacks[category]     (when no entry fb)
-#   3. Universal: terminal (no outgoing edge)
-# A "hop" is one traversal of an Entry-or-Category edge; the Universal terminal is
-# NOT an edge and is never counted as a cycle. Max chain depth is MAX_FALLBACK_HOPS.
+# assetId>>`. C09 validates its KEYS and TARGETS. It deliberately does NOT build a
+# transitive combined fallback graph: the runtime resolver
+# (frontend/src/game/pixi/assets/AssetManager.ts `resolveTiered`) builds a FIXED
+# per-request candidate sequence — primary -> entry(primary.fallbackAssetId) ->
+# category(categoryFallbacks[primary.category]) -> universal — and never recurses
+# into a fallback target's own fallback. So a categoryFallbacks-driven chain is
+# cycle-free and bounded by construction; entry-fallback cycles/depth on the
+# metadata graph remain C10/C11's job (matching the runtime static validateManifest).
 
 
 def _manifest_asset_index(ctx: CheckContext) -> dict[str, dict[str, Any]]:
@@ -507,39 +508,6 @@ def _manifest_asset_index(ctx: CheckContext) -> dict[str, dict[str, Any]]:
 
 def _category_fallbacks(ctx: CheckContext) -> Any:
     return (ctx.ws.manifest or {}).get("categoryFallbacks")
-
-
-def _combined_fallback_edges(ctx: CheckContext) -> dict[str, str | None]:
-    """asset_id -> resolved fallback (entry fb, else category fb, else None terminal)."""
-    assets = _manifest_asset_index(ctx)
-    catfb = _category_fallbacks(ctx)
-    catfb = catfb if isinstance(catfb, dict) else {}
-    edges: dict[str, str | None] = {}
-    for aid, entry in assets.items():
-        fb = entry.get("fallbackAssetId")
-        if isinstance(fb, str) and fb:
-            edges[aid] = fb
-            continue
-        cat = entry.get("category")
-        cfb = catfb.get(cat) if isinstance(cat, str) else None
-        edges[aid] = cfb if isinstance(cfb, str) and cfb else None
-    return edges
-
-
-def _chain_hops(edges: dict[str, str | None], start: str) -> int:
-    hops = 0
-    node: str | None = start
-    visited: set[str] = {start}
-    while isinstance(node, str) and node in edges:
-        nxt = edges.get(node)
-        if not isinstance(nxt, str):
-            break  # terminal
-        hops += 1
-        if nxt in visited:
-            break  # cycle — reported by C10, not depth
-        visited.add(nxt)
-        node = nxt
-    return hops
 
 
 # ---- C09 fallback exists ---------------------------------------------------
@@ -688,37 +656,6 @@ def c10_fallback_cycle(ctx: CheckContext) -> list[Result]:
                 break
             seen.append(node)
             node = edges.get(node)
-    out.extend(_c10_category_cycle(ctx))
-    return out
-
-
-def _c10_category_cycle(ctx: CheckContext) -> list[Result]:
-    if ctx.ws.manifest is None:
-        return []
-    edges = _combined_fallback_edges(ctx)
-    out: list[Result] = []
-    reported: set[tuple[str, ...]] = set()
-    for start in sorted(edges):
-        seen: list[str] = []
-        node: str | None = start
-        while isinstance(node, str) and node in edges:
-            if node in seen:
-                cycle = seen[seen.index(node) :] + [node]
-                key = tuple(sorted(set(cycle)))
-                if key not in reported:
-                    reported.add(key)
-                    out.append(
-                        err(
-                            "C10",
-                            "ASSET_CATEGORY_FALLBACK_CYCLE",
-                            "combined fallback cycle: " + " -> ".join(cycle),
-                            artifact_path="categoryFallbacks",
-                            details={"cycle": cycle},
-                        )
-                    )
-                break
-            seen.append(node)
-            node = edges.get(node)
     return out
 
 
@@ -746,28 +683,6 @@ def c11_fallback_depth(ctx: CheckContext) -> list[Result]:
                     )
                 )
                 break
-    out.extend(_c11_category_depth(ctx))
-    return out
-
-
-def _c11_category_depth(ctx: CheckContext) -> list[Result]:
-    if ctx.ws.manifest is None:
-        return []
-    edges = _combined_fallback_edges(ctx)
-    out: list[Result] = []
-    for start in sorted(edges):
-        hops = _chain_hops(edges, start)
-        if hops > MAX_FALLBACK_HOPS:
-            out.append(
-                err(
-                    "C11",
-                    "ASSET_CATEGORY_FALLBACK_DEPTH_EXCEEDED",
-                    f"combined fallback chain from '{start}' exceeds {MAX_FALLBACK_HOPS} hops",
-                    asset_id=start,
-                    artifact_path="categoryFallbacks",
-                    details={"hops": hops},
-                )
-            )
     return out
 
 

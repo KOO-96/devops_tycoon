@@ -62,6 +62,14 @@ class Severity(StrEnum):
     WARNING = "warning"
 
 
+# Error codes considered during development but RETIRED before any external release,
+# because they modelled a transitive combined fallback graph the runtime resolver never
+# traverses (AssetManager.resolveTiered is a fixed, non-recursive candidate sequence).
+# Never re-used with a different meaning.
+RETIRED_ERROR_CODES: frozenset[str] = frozenset(
+    {"ASSET_CATEGORY_FALLBACK_CYCLE", "ASSET_CATEGORY_FALLBACK_DEPTH_EXCEEDED"}
+)
+
 # Exception-waivable technical checks (rights/integrity checks are NEVER waivable).
 EXCEPTIONABLE_CHECKS: frozenset[str] = frozenset({"C15", "C16", "C17", "C18", "C26"})
 NEVER_EXCEPTIONABLE: frozenset[str] = frozenset({"C01", "C10", "C12", "C13", "C14", "C22", "C25"})
