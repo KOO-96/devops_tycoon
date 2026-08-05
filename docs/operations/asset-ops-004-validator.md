@@ -74,34 +74,48 @@ committed under `assets/metadata/`, per policy §2.
   `ASSET_ROLLBACK_REVOKED_TARGET` (a rights-revoked asset can never be reactivated by
   rollback; a re-cut or a safe rollback artifact is required).
 
-### Manifest `categoryFallbacks` (C09/C10/C11 — combined fallback graph)
+### Manifest `categoryFallbacks` (C09) + fallback resolution (runtime-aligned)
 
-C09–C11 validate the runtime manifest's `categoryFallbacks` (metadata-policy §10c) in
-addition to the metadata fallback graph, keeping the existing C09–C11 numbering and
-adding artifact-specific codes (existing `FALLBACK_MISSING`/`FALLBACK_CYCLE`/
-`FALLBACK_DEPTH` are unchanged and not repurposed):
+**Execution contract.** The runtime resolver
+`frontend/src/game/pixi/assets/AssetManager.ts` → `resolveTiered` builds a **fixed,
+non-recursive candidate sequence from the original request** —
+`primary → entry(primary.fallbackAssetId) → category(categoryFallbacks[primary.category])
+→ universal` — and never follows a fallback target's own fallback. It is therefore
+**cycle-free and bounded to ≤ 3 fallback hops by construction** (duplicate candidates
+loaded at most once). The runtime's static `validateManifest` checks entry-fallback
+transitive cycles + `categoryFallbacks` key/target existence, and **no** combined
+cycle/depth. The validator matches this: it does **not** model a transitive combined
+fallback graph, so it never rejects a manifest the runtime resolves safely.
+
+`categoryFallbacks` validation lives entirely in **C09** (metadata-policy §10c):
 
 | Code | Check | Condition |
 |---|---|---|
-| `ASSET_CATEGORY_FALLBACK_INVALID_KEY` | C09 | key is not a runtime `AssetCategory` (or field is not an object) |
-| `ASSET_CATEGORY_FALLBACK_TARGET_MISSING` | C09 | target is not a valid assetId / not present in manifest assets |
-| `ASSET_CATEGORY_FALLBACK_TARGET_EXCLUDED` | C09 | target is a known asset but excluded (DEPRECATED/REVOKED/not includable) |
-| `ASSET_CATEGORY_FALLBACK_CYCLE` | C10 | the **combined** fallback graph has a cycle |
-| `ASSET_CATEGORY_FALLBACK_DEPTH_EXCEEDED` | C11 | a combined fallback chain exceeds 3 hops |
+| `ASSET_CATEGORY_FALLBACK_INVALID_KEY` | C09 | field is not an object, or a key is not a runtime `AssetCategory` |
+| `ASSET_CATEGORY_FALLBACK_TARGET_MISSING` | C09 | target is not a valid/non-empty assetId, or not present in manifest assets |
+| `ASSET_CATEGORY_FALLBACK_TARGET_EXCLUDED` | C09 | target is a known asset but excluded (DEPRECATED/REVOKED/not includable); `details.state` records which |
 
-**Combined fallback graph** — each manifest asset resolves its fallback in this order:
-1. **Entry:** `assetId → entry.fallbackAssetId` (when present)
-2. **Category:** `assetId → categoryFallbacks[category]` (when no entry fallback)
-3. **Universal:** terminal (no outgoing edge)
+Target inclusion uses the single `canonical.is_production_includable` predicate, so an
+excluded/tampered target is caught. **C10 (`FALLBACK_CYCLE`)** and **C11
+(`FALLBACK_DEPTH`)** validate the **metadata entry-fallback graph only** (the
+`fallback_asset_id` chain) — C10 mirrors the runtime `validateManifest` transitive
+entry-cycle walk; they are unchanged and not repurposed.
 
-A **hop** is one traversal of an Entry-or-Category edge; the Universal terminal is not an
-edge and is never counted as a cycle. Max chain depth is **3 hops**. Target inclusion is
-decided by the single `canonical.is_production_includable` predicate, so an excluded
-target is caught regardless of any manifest tampering.
+**Retired codes.** `ASSET_CATEGORY_FALLBACK_CYCLE` and
+`ASSET_CATEGORY_FALLBACK_DEPTH_EXCEEDED` (from an earlier draft) modelled a transitive
+combined graph the runtime never traverses; they are **removed before any external
+release** and recorded in `core.RETIRED_ERROR_CODES` (never re-used with a new meaning).
 
-Coverage evidence: `pytest -q tests/asset_ops` (positive + all negatives incl. the 7
-independent `categoryFallbacks` fixtures + determinism + exit-code + exception-waiver +
-REVOKED-rollback + build_id inclusion-set regression tests).
+**Conformance.** `tests/asset_ops/vectors/fallback_candidate_sequence.json` pins the
+runtime candidate sequence; `tools/asset_ops/runtime_contract.py` reproduces it and a
+unit test asserts order/dedup/non-recursion/≤3 hops. A future TypeScript runtime test may
+read the same vector file.
+
+Coverage evidence: `pytest -q tests/asset_ops` — C09 `categoryFallbacks` negatives
+(invalid key, missing/empty target, excluded target, REVOKED target, non-object),
+**runtime-valid regressions** (category-target-with-own-fallback and the former depth/cycle
+scenarios now PASS), candidate-sequence conformance, determinism, exit-code,
+exception-waiver, REVOKED-rollback, and build_id inclusion-set regression tests.
 
 ## Shared canonical layer & the inclusion predicate
 
