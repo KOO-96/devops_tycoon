@@ -253,6 +253,46 @@ def _image_record(
     return rec
 
 
+def image_only_scenario() -> Scenario:
+    """A P3A generator workspace: image assets only (no atlas, which is BLOCKED_BY_P3B)."""
+    s = base_scenario()
+    del s.records["ui-incident-badge.json"]
+    s.category_fallbacks = {
+        "building": "fallback.universal.primary",
+        "ui": "fallback.universal.primary",
+    }
+    s.runtime_refs = ["building.load-balancer.primary", "fallback.universal.primary"]
+    s.regenerate_derived()
+    return s
+
+
+def write_generator_inputs(
+    s: Scenario, root: Path, *, config: dict[str, Any] | None = None
+) -> Path:
+    """Write ONLY generator inputs (binaries + metadata + generator-config).
+
+    The generated manifest / build-metadata / reports / rollback index are produced by
+    `python -m tools.asset_ops generate` — not pre-written here.
+    """
+    for rel, data in s.binaries.items():
+        p = root / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_bytes(data)
+    for rel, rec in s.records.items():
+        p = root / "assets" / "metadata" / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_bytes(_dumps(rec))
+    cfg = config or {
+        "manifest_version": "1",
+        "schema_version": SCHEMA_VERSION,
+        "generator_version": GENERATOR_VERSION,
+        "generator_config_version": GENERATOR_CONFIG_VERSION,
+        "category_fallbacks": s.category_fallbacks or {},
+    }
+    (root / "assets" / "generator-config.json").write_bytes(_dumps(cfg))
+    return root
+
+
 def base_scenario() -> Scenario:
     """A complete positive fixture: 2 images + 1 atlas, all APPROVED and consistent."""
     s = Scenario()
