@@ -19,8 +19,9 @@ def test_exit_2_on_bad_usage() -> None:
 
 def test_exit_2_on_missing_workspace(tmp_path: Path) -> None:
     report_path = tmp_path / "r.json"
-    rc = run(["validate", "--workspace", str(tmp_path / "nope"),
-              "--report", str(report_path), "--quiet"])
+    rc = run(
+        ["validate", "--workspace", str(tmp_path / "nope"), "--report", str(report_path), "--quiet"]
+    )
     assert rc == 2
     report = json.loads(report_path.read_text(encoding="utf-8"))
     assert report["status"] == "error"

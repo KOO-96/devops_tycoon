@@ -31,8 +31,9 @@ def a_missing_json(s: Scenario) -> None:
 
 def a_missing_image(s: Scenario) -> None:
     s.records[BADGE]["source"]["atlas_image_path"] = "assets/source/missing.png"
-    s.set_atlas_descriptor({"image": "missing.png", "frames": _frame(64, 32)["frames"]},
-                           fix_checksum=True)
+    s.set_atlas_descriptor(
+        {"image": "missing.png", "frames": _frame(64, 32)["frames"]}, fix_checksum=True
+    )
     s.resync()
 
 
@@ -47,17 +48,21 @@ def a_image_checksum(s: Scenario) -> None:
 
 
 def a_image_reference(s: Scenario) -> None:
-    s.set_atlas_descriptor({"image": "other.png", "frames": _frame(64, 32)["frames"]},
-                           fix_checksum=True)
+    s.set_atlas_descriptor(
+        {"image": "other.png", "frames": _frame(64, 32)["frames"]}, fix_checksum=True
+    )
     s.resync()
 
 
 def a_duplicate_frame(s: Scenario) -> None:
     s.set_atlas_descriptor(
-        {"image": "badge.png", "frames": [
-            {"name": "badge-idle", "frame": {"x": 0, "y": 0, "w": 64, "h": 32}},
-            {"name": "badge-idle", "frame": {"x": 0, "y": 0, "w": 64, "h": 32}},
-        ]},
+        {
+            "image": "badge.png",
+            "frames": [
+                {"name": "badge-idle", "frame": {"x": 0, "y": 0, "w": 64, "h": 32}},
+                {"name": "badge-idle", "frame": {"x": 0, "y": 0, "w": 64, "h": 32}},
+            ],
+        },
         fix_checksum=True,
     )
     s.resync()
@@ -111,5 +116,7 @@ def test_image_checksum_detects_tampered_bytes(tmp_path: Path) -> None:
     rc, report = run_scenario(scn, tmp_path, name="tamper")
     assert rc == 1
     assert "ASSET_CHECKSUM_ATLAS_IMAGE_MISMATCH" in blocking_codes(report)
-    assert sha256_hex(scn.binaries["assets/source/badge.png"]) != scn.records[BADGE][
-        "source"]["atlas_image_checksum_sha256"]
+    assert (
+        sha256_hex(scn.binaries["assets/source/badge.png"])
+        != scn.records[BADGE]["source"]["atlas_image_checksum_sha256"]
+    )

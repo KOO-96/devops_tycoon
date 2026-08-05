@@ -23,9 +23,15 @@ def _oversize_building(s: Scenario) -> None:
     s.resync()
 
 
-def _exception(check_id: str, *, approver: str = "DevCTO", status: str = "active",
-               expires: str = FUTURE, asset_id: str = BUILDING_ID,
-               version: str = "1") -> dict[str, Any]:
+def _exception(
+    check_id: str,
+    *,
+    approver: str = "DevCTO",
+    status: str = "active",
+    expires: str = FUTURE,
+    asset_id: str = BUILDING_ID,
+    version: str = "1",
+) -> dict[str, Any]:
     return {
         "exception_id": f"exc-{check_id.lower()}",
         "asset_id": asset_id,

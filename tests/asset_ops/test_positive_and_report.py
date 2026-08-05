@@ -26,8 +26,15 @@ def test_positive_fixture_passes_all_checks(tmp_path: Path) -> None:
 
 def test_report_has_contract_shape(tmp_path: Path) -> None:
     _, report = run_scenario(base_scenario(), tmp_path)
-    for key in ("schema_version", "tool_version", "required_check", "build_id",
-                "status", "summary", "results"):
+    for key in (
+        "schema_version",
+        "tool_version",
+        "required_check",
+        "build_id",
+        "status",
+        "summary",
+        "results",
+    ):
         assert key in report, f"missing top-level key {key}"
     for key in ("errors", "warnings", "excluded", "passed_checks", "failed_checks"):
         assert key in report["summary"], f"missing summary key {key}"

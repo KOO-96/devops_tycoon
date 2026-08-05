@@ -33,12 +33,17 @@ def _image_record(asset_id: str, category: str, fallback: str | None = None) -> 
 
     fb_bytes = base_scenario().binaries["assets/source/fallback.png"]
     return build_image_record(
-        asset_id, category, "assets/source/fallback.png", sha256_hex(fb_bytes),
-        anchor={"x": 0.5, "y": 0.5}, fallback=fallback,
+        asset_id,
+        category,
+        "assets/source/fallback.png",
+        sha256_hex(fb_bytes),
+        anchor={"x": 0.5, "y": 0.5},
+        fallback=fallback,
     )
 
 
 # ---- mutators --------------------------------------------------------------
+
 
 def m_c01(s: Scenario) -> None:
     s.records[BUILDING]["category"] = "widget"

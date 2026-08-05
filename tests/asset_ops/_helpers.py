@@ -14,10 +14,18 @@ DEFAULT_NOW = "2026-06-01T00:00:00+00:00"
 
 
 def run_ws(root: Path, report_path: Path, now: str = DEFAULT_NOW) -> tuple[int, dict[str, Any]]:
-    rc = run([
-        "validate", "--workspace", str(root),
-        "--report", str(report_path), "--now", now, "--quiet",
-    ])
+    rc = run(
+        [
+            "validate",
+            "--workspace",
+            str(root),
+            "--report",
+            str(report_path),
+            "--now",
+            now,
+            "--quiet",
+        ]
+    )
     report: dict[str, Any] = json.loads(report_path.read_text(encoding="utf-8"))
     return rc, report
 

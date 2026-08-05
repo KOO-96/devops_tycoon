@@ -65,28 +65,40 @@ class Scenario:
     exceptions: dict[str, dict[str, Any]] = field(default_factory=dict)  # id -> record
     bundle_config: dict[str, Any] | None = None
     runtime_refs: list[str] | None = None
+    category_fallbacks: dict[str, str] | None = None  # manifest categoryFallbacks (default valid)
 
     def clone(self) -> Scenario:
         return copy.deepcopy(self)
 
     def included(self) -> list[dict[str, Any]]:
-        return [
-            r for r in self.records.values()
-            if r.get("approval_state") == "APPROVED_FOR_PRODUCTION"
-            and r.get("production_approved") is True
-        ]
+        # Uses the SAME inclusion predicate as the validator — the fixture builder must
+        # never carry its own inclusion rule (P2 corrections §2).
+        return canonical.canonical_included_metadata(list(self.records.values()))
 
     def regenerate_derived(self) -> None:
-        """Recompute manifest + build_id from current records (keep them consistent)."""
+        """TEST-ONLY workspace assembly helper — NOT the production generator.
+
+        Recomputes a consistent manifest + build_id from the current records by calling
+        the shared canonical primitives (`canonical_included_metadata`,
+        `metadata_to_entry`, `compute_build_id`). This is **not** the official
+        Metadata->Manifest API and **not** frontend runtime code; it exists only so a
+        fixture stays internally consistent. When P3A lands the official Python
+        `tools/asset_ops` generator, this helper will be replaced by a call to it.
+        """
         incl = self.included()
         entries = [canonical.metadata_to_entry(r) for r in incl]
+        catfb = (
+            self.category_fallbacks
+            if self.category_fallbacks is not None
+            else {
+                "building": "fallback.universal.primary",
+                "ui": "fallback.universal.primary",
+            }
+        )
         self.manifest = {
             "manifestVersion": "1",
             "assets": entries,
-            "categoryFallbacks": {
-                "building": "fallback.universal.primary",
-                "ui": "fallback.universal.primary",
-            },
+            "categoryFallbacks": catfb,
         }
         self.build_metadata = {
             "schema_version": SCHEMA_VERSION,
@@ -119,21 +131,45 @@ class Scenario:
                     "eligible": True,
                     "assets": [
                         {"asset_id": r["asset_id"], "asset_version": r["asset_version"]}
-                        for r in self.records.values()
+                        for r in self.included()  # only shipped (includable) assets
                     ],
                 }
             ]
         }
         self.regenerate_derived()
 
+    def add_image_asset(
+        self,
+        asset_id: str,
+        category: str,
+        *,
+        anchor: dict[str, float] | None = None,
+        fallback: str | None = None,
+        approval_state: str = "APPROVED_FOR_PRODUCTION",
+    ) -> None:
+        """Add an extra image record (reusing the fallback.png binary). Test helper."""
+        rec = _image_record(
+            asset_id,
+            category,
+            "assets/source/fallback.png",
+            sha256_hex(self.binaries["assets/source/fallback.png"]),
+            anchor=anchor,
+            fallback=fallback,
+        )
+        if approval_state != "APPROVED_FOR_PRODUCTION":
+            rec["approval_state"] = approval_state
+            rec["production_approved"] = False
+        key = asset_id.replace(".", "-") + ".json"
+        self.records[key] = rec
+
     def set_atlas_descriptor(self, descriptor: dict[str, Any], *, fix_checksum: bool) -> None:
         """Replace the atlas descriptor bytes; optionally refresh the JSON checksum."""
         data = _dumps(descriptor)
         self.binaries["assets/source/badge.json"] = data
         if fix_checksum:
-            self.records["ui-incident-badge.json"]["source"][
-                "atlas_json_checksum_sha256"
-            ] = sha256_hex(data)
+            self.records["ui-incident-badge.json"]["source"]["atlas_json_checksum_sha256"] = (
+                sha256_hex(data)
+            )
 
     def write(self, root: Path) -> Path:
         for rel, data in self.binaries.items():
@@ -181,9 +217,15 @@ def _approval(version: str) -> dict[str, Any]:
 
 
 def _image_record(
-    asset_id: str, category: str, source_path: str, checksum: str, *,
-    anchor: dict[str, float] | None = None, footprint: dict[str, int] | None = None,
-    fallback: str | None = None, bundle: str = "critical-core",
+    asset_id: str,
+    category: str,
+    source_path: str,
+    checksum: str,
+    *,
+    anchor: dict[str, float] | None = None,
+    footprint: dict[str, int] | None = None,
+    fallback: str | None = None,
+    bundle: str = "critical-core",
 ) -> dict[str, Any]:
     rec: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
@@ -230,12 +272,19 @@ def base_scenario() -> Scenario:
     s.binaries["assets/source/badge.json"] = descriptor_bytes
 
     s.records["fallback-universal.json"] = _image_record(
-        "fallback.universal.primary", "fallback", "assets/source/fallback.png",
-        sha256_hex(fb_png), anchor={"x": 0.5, "y": 0.5},
+        "fallback.universal.primary",
+        "fallback",
+        "assets/source/fallback.png",
+        sha256_hex(fb_png),
+        anchor={"x": 0.5, "y": 0.5},
     )
     s.records["building-load-balancer.json"] = _image_record(
-        "building.load-balancer.primary", "building", "assets/source/load-balancer.png",
-        sha256_hex(lb_png), anchor={"x": 0.5, "y": 1.0}, footprint={"width": 2, "height": 2},
+        "building.load-balancer.primary",
+        "building",
+        "assets/source/load-balancer.png",
+        sha256_hex(lb_png),
+        anchor={"x": 0.5, "y": 1.0},
+        footprint={"width": 2, "height": 2},
         fallback="fallback.universal.primary",
     )
     atlas = {
