@@ -151,15 +151,19 @@ def _run_generate(args: argparse.Namespace) -> int:
 
 
 def _run_verify_generated(args: argparse.Namespace) -> int:
+    """Verify deterministic regeneration of ALL outputs, drift of the PERSISTED
+    baselines (manifest/build-metadata/rollback), report schema, and P2 compliance.
+    Ephemeral CI reports (mapping/exclusion/validation) are NOT source-controlled
+    baselines — they are checked for A/B byte-stability + schema, not repository drift.
+    """
     root: Path = args.workspace
     try:
-        outputs = generator.generate(root)
-        # Byte-stability: regenerating must be identical.
-        again = generator.generate(root)
-        if outputs.manifest_bytes() != again.manifest_bytes():
-            print("error: generation is not byte-stable", file=sys.stderr)
-            return EXIT_FAIL
-        drift = _detect_drift(root, outputs)
+        gen_a = generator.generate(root)
+        gen_b = generator.generate(root)
+        bytes_a, bytes_b = gen_a.all_artifact_bytes(), gen_b.all_artifact_bytes()
+        nondeterministic = sorted(rel for rel in bytes_a if bytes_a[rel] != bytes_b[rel])
+        schema_problems = generator.report_schema_problems(gen_a)
+        drift = _detect_drift(root, gen_a)  # persisted baselines only
         report = _validate_report(root, _resolve_now(args.now))
     except InputError as exc:
         print(f"error (input): {exc}", file=sys.stderr)
@@ -169,26 +173,27 @@ def _run_verify_generated(args: argparse.Namespace) -> int:
         return EXIT_INTERNAL
 
     gate_failed = report["status"] == "fail"
+    fail = bool(nondeterministic or schema_problems or drift or gate_failed or gen_a.hard_errors)
     if not args.quiet:
+        for n in nondeterministic:
+            print(f"  [NONDETERMINISTIC] {n}", file=sys.stderr)
+        for s in schema_problems:
+            print(f"  [SCHEMA] {s}", file=sys.stderr)
         for d in drift:
             print(f"  [DRIFT] {d}", file=sys.stderr)
         print(
-            f"verify-generated: drift={len(drift)} gate={'fail' if gate_failed else 'pass'} "
-            f"hard_errors={len(outputs.hard_errors)}",
+            f"verify-generated: nondeterministic={len(nondeterministic)} "
+            f"schema={len(schema_problems)} drift={len(drift)} "
+            f"gate={'fail' if gate_failed else 'pass'} hard_errors={len(gen_a.hard_errors)}",
             file=sys.stderr,
         )
-    return EXIT_FAIL if (drift or gate_failed or outputs.hard_errors) else EXIT_PASS
+    return EXIT_FAIL if fail else EXIT_PASS
 
 
 def _detect_drift(root: Path, outputs: generator.GeneratedOutputs) -> list[str]:
-    """Return the list of committed artifacts that differ from a fresh generation."""
-    expected = {
-        generator.MANIFEST_REL: outputs.manifest_bytes(),
-        generator.BUILD_META_REL: generator._dumps(outputs.build_metadata),
-        generator.ROLLBACK_REL: generator._dumps(outputs.rollback_index),
-    }
+    """Persisted source-controlled baselines that differ from a fresh generation."""
     drift: list[str] = []
-    for rel, want in expected.items():
+    for rel, want in outputs.persisted_bytes().items():
         path = root / rel
         if not path.is_file():
             drift.append(f"{rel}: missing (not committed)")

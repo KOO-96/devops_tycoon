@@ -42,6 +42,14 @@ CONFIG_REL = "assets/generator-config.json"
 
 # Atlas is a valid production source_type but NOT runtime-ready in P3A.
 RUNTIME_READY_SOURCE_TYPES: frozenset[str] = frozenset({"image"})
+# Generator exclusion reason for an approved-but-not-runtime-ready atlas asset.
+ATLAS_BLOCKED_CODE = "ASSET_ATLAS_BLOCKED_BY_P3B"
+
+# Persisted, source-controlled generated baselines (verify-generated diffs these vs the
+# workspace). The reports below are ephemeral CI artifacts (regenerated every run) —
+# verified by A/B byte-stability + schema, NOT by repository drift.
+PERSISTED_BASELINES: tuple[str, ...] = (MANIFEST_REL, BUILD_META_REL, ROLLBACK_REL)
+CI_ONLY_REPORTS: tuple[str, ...] = (MAPPING_REL, EXCLUSION_REL, SUMMARY_REL)
 
 
 @dataclass
@@ -56,6 +64,20 @@ class GeneratedOutputs:
 
     def manifest_bytes(self) -> bytes:
         return canonical.canonical_manifest_bytes(self.manifest)
+
+    def all_artifact_bytes(self) -> dict[str, bytes]:
+        """Every generated artifact serialized — for A/B determinism comparison."""
+        return {
+            MANIFEST_REL: self.manifest_bytes(),
+            BUILD_META_REL: _dumps(self.build_metadata),
+            MAPPING_REL: _dumps(self.mapping_report),
+            EXCLUSION_REL: _dumps(self.exclusion_report),
+            SUMMARY_REL: _dumps(self.validation_summary),
+            ROLLBACK_REL: _dumps(self.rollback_index),
+        }
+
+    def persisted_bytes(self) -> dict[str, bytes]:
+        return {rel: self.all_artifact_bytes()[rel] for rel in PERSISTED_BASELINES}
 
 
 def _dumps(obj: Any) -> bytes:
@@ -120,6 +142,25 @@ def _sorted_category_fallbacks(raw: Any) -> dict[str, str]:
     return {str(k): str(v) for k, v in sorted(raw.items())}
 
 
+def _exclusion_reason_for(data: dict[str, Any], included_ids: set[str]) -> tuple[str, bool] | None:
+    """Reason + blocking for a record; None when it enters the manifest.
+
+    An includable-but-not-runtime-ready asset (atlas) is blocked (BLOCKED_BY_P3B); all
+    other non-included records are classified by `_classify_exclusion`.
+    """
+    aid = str(data.get("asset_id"))
+    if aid in included_ids:
+        if data.get("source_type") in RUNTIME_READY_SOURCE_TYPES:
+            return None
+        return ATLAS_BLOCKED_CODE, True
+    return _classify_exclusion(data)
+
+
+def _mapping_reason(data: dict[str, Any], included_ids: set[str]) -> str | None:
+    classified = _exclusion_reason_for(data, included_ids)
+    return None if classified is None else classified[0]
+
+
 def build_outputs(records: list[dict[str, Any]], config: dict[str, Any]) -> GeneratedOutputs:
     schema_version = str(config["schema_version"])
     generator_version = str(config["generator_version"])
@@ -131,16 +172,13 @@ def build_outputs(records: list[dict[str, Any]], config: dict[str, Any]) -> Gene
     included_ids = {str(d.get("asset_id")) for d in included}
     hard_errors: list[str] = []
 
-    # runtime-ready gate: only `image` becomes a runtime entry in P3A.
-    entries: list[dict[str, Any]] = []
-    for d in included:
-        if d.get("source_type") in RUNTIME_READY_SOURCE_TYPES:
-            entries.append(canonical.metadata_to_entry(d))
-        else:
-            hard_errors.append(
-                f"{d.get('asset_id')}@{d.get('asset_version')}: source_type "
-                f"'{d.get('source_type')}' is not runtime-ready in P3A (atlas BLOCKED_BY_P3B)"
-            )
+    # runtime-ready gate: only `image` becomes a runtime entry in P3A. A non-runtime-ready
+    # includable asset (atlas) is recorded in the exclusion loop below (BLOCKED_BY_P3B).
+    entries: list[dict[str, Any]] = [
+        canonical.metadata_to_entry(d)
+        for d in included
+        if d.get("source_type") in RUNTIME_READY_SOURCE_TYPES
+    ]
 
     # Fallback targets referenced by runtime (entry + category) — used for exclusion severity.
     referenced: set[str] = set()
@@ -151,15 +189,14 @@ def build_outputs(records: list[dict[str, Any]], config: dict[str, Any]) -> Gene
     for target in category_fallbacks.values():
         referenced.add(target)
 
-    # Exclusions
+    # Exclusions — every non-manifest record is recorded (no silent exclusion).
     exclusions: list[dict[str, Any]] = []
     for d in records:
+        classified = _exclusion_reason_for(d, included_ids)
+        if classified is None:
+            continue  # in the manifest
         aid = str(d.get("asset_id"))
-        if aid in included_ids and d.get("source_type") in RUNTIME_READY_SOURCE_TYPES:
-            continue
-        if aid in included_ids:
-            continue  # runtime-ready hard error already recorded
-        reason, blocking = _classify_exclusion(d)
+        reason, blocking = classified
         referenced_by_runtime = aid in referenced
         if referenced_by_runtime:
             blocking = True  # an excluded-but-needed fallback target is never silent
@@ -178,7 +215,9 @@ def build_outputs(records: list[dict[str, Any]], config: dict[str, Any]) -> Gene
         )
         if reason == "REVOKED":
             hard_errors.append(f"{aid}: REVOKED asset present in generation input")
-        if blocking and reason != "REVOKED":
+        elif reason == ATLAS_BLOCKED_CODE:
+            hard_errors.append(f"{aid}: atlas source not runtime-ready in P3A (BLOCKED_BY_P3B)")
+        elif blocking:
             hard_errors.append(f"{aid}: non-includable asset ({reason})")
 
     # categoryFallbacks target sanity (generator-side; P2 C09 is the enforced gate)
@@ -216,10 +255,7 @@ def build_outputs(records: list[dict[str, Any]], config: dict[str, Any]) -> Gene
                     "runtime_manifest_index": _entry_index(manifest, d),
                     "runtime_source": canonical.metadata_to_entry(d).get("source"),
                     "runtime_checksum": canonical.metadata_to_entry(d).get("checksum"),
-                    "exclusion_reason_code": None
-                    if str(d.get("asset_id")) in included_ids
-                    and d.get("source_type") in RUNTIME_READY_SOURCE_TYPES
-                    else _classify_exclusion(d)[0],
+                    "exclusion_reason_code": _mapping_reason(d, included_ids),
                 }
                 for d in records
             ),
@@ -275,16 +311,67 @@ def _entry_index(manifest: dict[str, Any], data: dict[str, Any]) -> int | None:
     return None
 
 
+def _iter_strings(obj: Any) -> Any:
+    if isinstance(obj, str):
+        yield obj
+    elif isinstance(obj, dict):
+        for v in obj.values():
+            yield from _iter_strings(v)
+    elif isinstance(obj, list):
+        for v in obj:
+            yield from _iter_strings(v)
+
+
+def report_schema_problems(outputs: GeneratedOutputs) -> list[str]:
+    """Required-field + no-absolute-path checks for the CI-only reports."""
+    problems: list[str] = []
+    m = outputs.mapping_report.get("entries")
+    if not isinstance(m, list):
+        problems.append("mapping-report: 'entries' missing or not a list")
+    else:
+        for e in m:
+            for f in (
+                "asset_id",
+                "asset_version",
+                "included",
+                "runtime_manifest_index",
+                "runtime_source",
+                "runtime_checksum",
+                "exclusion_reason_code",
+            ):
+                if f not in e:
+                    problems.append(f"mapping-report entry missing '{f}'")
+    x = outputs.exclusion_report.get("exclusions")
+    if not isinstance(x, list):
+        problems.append("exclusion-report: 'exclusions' missing or not a list")
+    else:
+        for e in x:
+            for f in (
+                "asset_id",
+                "asset_version",
+                "approval_state",
+                "exclusion_reason_code",
+                "referenced_by_runtime",
+                "merge_blocking",
+                "message",
+            ):
+                if f not in e:
+                    problems.append(f"exclusion-report entry missing '{f}'")
+    for f in ("generated_total", "included", "excluded", "hard_errors", "build_id"):
+        if f not in outputs.validation_summary:
+            problems.append(f"validation-summary missing '{f}'")
+    for name, report in (
+        ("mapping", outputs.mapping_report),
+        ("exclusion", outputs.exclusion_report),
+        ("validation-summary", outputs.validation_summary),
+    ):
+        if any(s.startswith("/") for s in _iter_strings(report)):
+            problems.append(f"{name}-report: contains an absolute host path")
+    return problems
+
+
 def _write_all(root: Path, outputs: GeneratedOutputs) -> None:
-    targets = {
-        MANIFEST_REL: outputs.manifest_bytes(),
-        BUILD_META_REL: _dumps(outputs.build_metadata),
-        MAPPING_REL: _dumps(outputs.mapping_report),
-        EXCLUSION_REL: _dumps(outputs.exclusion_report),
-        SUMMARY_REL: _dumps(outputs.validation_summary),
-        ROLLBACK_REL: _dumps(outputs.rollback_index),
-    }
-    for rel, data in targets.items():
+    for rel, data in outputs.all_artifact_bytes().items():
         path = root / rel
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(data)
