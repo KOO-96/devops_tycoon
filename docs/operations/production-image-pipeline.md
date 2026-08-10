@@ -36,24 +36,38 @@ python -m tools.asset_ops validate         --workspace <ws>   # C01-C26 (ASSET-O
 ```
 
 Exit codes — `generate`: 0 success · 1 metadata/policy violation · 2 input · 3 internal.
-`verify-generated`: 0 identical+gate-pass · 1 drift or gate-fail · 2 input · 3 internal.
+`verify-generated`: 0 all-checks-pass · 1 non-deterministic / persisted-baseline drift /
+report-schema / P2 gate-fail / policy violation · 2 input · 3 internal.
+
+**`verify-generated` verifies** (1) **deterministic regeneration of ALL outputs** (generate
+twice, compare every artifact byte-for-byte), (2) **drift of the persisted
+source-controlled baselines** (Runtime Manifest, Build Metadata, Rollback Index) vs the
+workspace, (3) **report schema** (required fields, no absolute host paths), and (4) **P2
+validator compliance** (C01–C26). It does **not** treat the ephemeral CI reports
+(Mapping/Exclusion/Validation) as source-controlled baselines — those are regenerated
+every run and checked for A/B byte-stability + schema, not repository drift.
 
 ### Generator outputs
 
-| Output | Path | Disposition |
-|---|---|---|
-| Runtime Manifest | `assets/generated/manifests/manifest.json` | committed · runtime-consumed |
-| Build Metadata | `assets/generated/build-metadata.json` | release artifact |
-| Mapping Report | `assets/generated/reports/mapping-report.json` | CI artifact (audit) |
-| Exclusion Report | `assets/generated/reports/exclusion-report.json` | CI artifact (audit) |
-| Validation Summary | `assets/generated/reports/validation-summary.json` | CI artifact (audit) |
-| Rollback Index | `assets/releases/rollback-index.json` | release artifact |
+| Output | Path | Lifecycle | verify-generated |
+|---|---|---|---|
+| Runtime Manifest | `assets/generated/manifests/manifest.json` | **persisted baseline** · committed · runtime-consumed | drift-checked |
+| Build Metadata | `assets/generated/build-metadata.json` | **persisted baseline** · release · audit | drift-checked |
+| Rollback Index | `assets/releases/rollback-index.json` | **persisted baseline** · release · rollback | drift-checked |
+| Mapping Report | `assets/generated/reports/mapping-report.json` | CI-only · audit · not runtime-consumed | A/B byte-stability + schema |
+| Exclusion Report | `assets/generated/reports/exclusion-report.json` | CI-only · audit · not runtime-consumed | A/B byte-stability + schema |
+| Validation Summary | `assets/generated/reports/validation-summary.json` | CI-only · audit · not P2-report substitute | A/B byte-stability + schema |
 
 The Runtime Manifest is byte-deterministic (sorted keys, `assets` by
 `assetId+assetVersion`, sorted `categoryFallbacks`, UTF-8, LF, no timestamps/hostnames/
 absolute paths). Inclusion is decided ONLY by `canonical.is_production_includable`;
-exclusions are reported (never silent): DEPRECATED = non-blocking exclude; REVOKED,
-DRAFT/review, approval mismatch, invalid license = blocking. The generator does **not**
+exclusions are reported in the exclusion report (never silent): DEPRECATED = non-blocking
+exclude; REVOKED, DRAFT/*_REVIEW/*_REJECTED (P1 approval-workflow §4 — hard error in
+production generation input), approval mismatch, invalid license = blocking. An approved
+**atlas** asset is not runtime-ready in P3A: it is a hard error, recorded in the exclusion
+report as `ASSET_ATLAS_BLOCKED_BY_P3B` (merge_blocking, referenced in the validation
+summary too) and excluded from the manifest/build_id — never converted to an image or
+generated entry (First Production Atlas Asset Gate CLOSED). The generator does **not**
 re-run C01-C26 — the P2 validator (`verify-generated` also invokes it) is the gate.
 
 **Fallbacks:** the generator emits `categoryFallbacks` matching the runtime resolver
