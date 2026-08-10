@@ -115,3 +115,97 @@ describe('production image loading via AssetManager', () => {
     h2.release();
   });
 });
+
+// ---- P3A targeted follow-up coverage (§8-§11) -----------------------------
+
+function respFrom(bytes: Uint8Array, status = 200): Response {
+  const init: ResponseInit = status === 200 ? { status, headers: { 'content-type': 'image/png' } } : { status };
+  return new Response(bytes as unknown as BodyInit, init);
+}
+function seqFetch(responses: Response[]): ReturnType<typeof vi.fn> {
+  let i = 0;
+  return vi.fn(async () => responses[Math.min(i++, responses.length - 1)]);
+}
+function trackingDecode(): { decode: () => Promise<PixiTexture>; textures: PixiTexture[] } {
+  const textures: PixiTexture[] = [];
+  const decode = async (): Promise<PixiTexture> => {
+    const t = { destroy: vi.fn() } as unknown as PixiTexture;
+    textures.push(t);
+    return t;
+  };
+  return { decode, textures };
+}
+function managerWith(loader: ProductionImageAssetLoader, m: AssetManifest): AssetManager {
+  const mgr = new AssetManager({ loader, sleep: backoffOnly, registerDevelopmentManifest: false });
+  mgr.registerManifest(m);
+  managers.push(mgr);
+  return mgr;
+}
+
+describe('production image loader — targeted follow-up paths', () => {
+  it('integrity refetch SUCCESS: first bytes corrupt, refetch good → primary; corrupt texture destroyed', async () => {
+    const fetchImpl = seqFetch([respFrom(new Uint8Array([1, 1, 1, 1])), respFrom(BYTES)]);
+    const { decode, textures } = trackingDecode();
+    const loader = new ProductionImageAssetLoader({ fetchImpl: fetchImpl as unknown as typeof fetch, decode });
+    const mgr = managerWith(loader, manifest(imgEntry(GOOD))); // entry.checksum = sha256(BYTES)
+    const h = await mgr.acquire('building.a.primary');
+    expect(h.fallback).toBe(false);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect((fetchImpl.mock.calls[1] as unknown[])?.[1]).toMatchObject({ cache: 'no-store' });
+    expect(textures[0]!.destroy).toHaveBeenCalled(); // corrupt texture destroyed
+    expect(textures[1]!.destroy).not.toHaveBeenCalled(); // good texture kept
+    h.release();
+  });
+
+  it('503 → transient retry → 200 success (no integrity refetch)', async () => {
+    const fetchImpl = seqFetch([respFrom(new Uint8Array(), 503), respFrom(BYTES)]);
+    const { decode, textures } = trackingDecode();
+    const loader = new ProductionImageAssetLoader({ fetchImpl: fetchImpl as unknown as typeof fetch, decode });
+    const mgr = managerWith(loader, manifest(imgEntry(GOOD)));
+    const h = await mgr.acquire('building.a.primary');
+    expect(h.fallback).toBe(false);
+    expect(fetchImpl).toHaveBeenCalledTimes(2); // 503 + 200 (transient retry, not integrity refetch)
+    expect(textures.length).toBe(1); // 503 never reaches decode
+    expect(mgr.lastTierOf('building.a.primary')).toBe('primary');
+    h.release();
+  });
+
+  it('double mismatch: both corrupt textures destroyed, then fallback', async () => {
+    const fetchImpl = seqFetch([respFrom(new Uint8Array([1])), respFrom(new Uint8Array([2]))]);
+    const { decode, textures } = trackingDecode();
+    const loader = new ProductionImageAssetLoader({ fetchImpl: fetchImpl as unknown as typeof fetch, decode });
+    const mgr = managerWith(loader, manifest(imgEntry(GOOD)));
+    const h = await mgr.acquire('building.a.primary');
+    expect(h.fallback).toBe(true);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(textures.length).toBe(2);
+    expect(textures[0]!.destroy).toHaveBeenCalled();
+    expect(textures[1]!.destroy).toHaveBeenCalled();
+    h.release();
+  });
+
+  it('is safe when disposed during decode: late texture destroyed, not registered', async () => {
+    let releaseDecode!: () => void;
+    const gate = new Promise<void>((r) => (releaseDecode = r));
+    const textures: PixiTexture[] = [];
+    const decode = async (): Promise<PixiTexture> => {
+      await gate;
+      const t = { destroy: vi.fn() } as unknown as PixiTexture;
+      textures.push(t);
+      return t;
+    };
+    const loader = new ProductionImageAssetLoader({
+      fetchImpl: vi.fn(async () => okResponse()) as unknown as typeof fetch,
+      decode,
+    });
+    const mgr = managerWith(loader, manifest(imgEntry(GOOD)));
+    const acquiring = mgr.acquire('building.a.primary');
+    const disposing = mgr.disposeAll();
+    releaseDecode(); // let decode finish AFTER dispose began
+    const h = await acquiring;
+    await disposing;
+    expect(h.fallback).toBe(true);
+    expect(textures.length).toBe(1);
+    expect(textures[0]!.destroy).toHaveBeenCalled(); // discarded, never registered into a disposed manager
+  });
+});
