@@ -194,15 +194,82 @@ def test_verify_generated_detects_drift(tmp_path: Path) -> None:
     assert run(["verify-generated", "--workspace", str(root), "--quiet"]) == 1
 
 
-def test_atlas_asset_blocked_by_p3b(tmp_path: Path) -> None:
-    # An approved atlas asset is NOT runtime-ready in P3A -> generation hard-errors.
+def test_atlas_asset_blocked_by_p3b_in_both_reports(tmp_path: Path) -> None:
+    # An approved atlas asset is NOT runtime-ready in P3A: hard error + recorded in the
+    # exclusion report (not silent) AND surfaced in the validation summary; not in manifest.
     from tests.assets.fixtures.builder import base_scenario
 
-    s = base_scenario()  # has an atlas asset
+    s = base_scenario()  # has an atlas asset (ui.incident.badge)
     s.category_fallbacks = {"building": "fallback.universal.primary"}
     root = write_generator_inputs(s, tmp_path / "atlas")
     assert run(["generate", "--workspace", str(root), "--quiet"]) == 1
+    excl = json.loads((root / "assets/generated/reports/exclusion-report.json").read_text("utf-8"))
+    atlas = next(e for e in excl["exclusions"] if e["asset_id"] == "ui.incident.badge")
+    assert atlas["exclusion_reason_code"] == "ASSET_ATLAS_BLOCKED_BY_P3B"
+    assert atlas["merge_blocking"] is True
     summ = json.loads(
         (root / "assets/generated/reports/validation-summary.json").read_text("utf-8")
     )
-    assert any("atlas" in m.lower() or "BLOCKED_BY_P3B" in m for m in summ["hard_error_messages"])
+    assert any("BLOCKED_BY_P3B" in m for m in summ["hard_error_messages"])
+    manifest = json.loads((root / "assets/generated/manifests/manifest.json").read_text("utf-8"))
+    assert all(e["assetId"] != "ui.incident.badge" for e in manifest["assets"])  # not in manifest
+
+
+def test_persisted_baseline_drift_all_three(tmp_path: Path) -> None:
+    baselines = {
+        "manifest": "assets/generated/manifests/manifest.json",
+        "build_metadata": "assets/generated/build-metadata.json",
+        "rollback": "assets/releases/rollback-index.json",
+    }
+    for name, rel in baselines.items():
+        root = _ws(tmp_path, f"pbd-{name}")
+        run(["generate", "--workspace", str(root), "--quiet"])
+        assert run(["verify-generated", "--workspace", str(root), "--quiet"]) == 0
+        p = root / rel
+        p.write_bytes(p.read_bytes().replace(b'"', b'" ', 1))  # 1-char edit
+        assert run(["verify-generated", "--workspace", str(root), "--quiet"]) == 1, name
+
+
+def test_ci_report_edit_is_not_baseline_drift(tmp_path: Path) -> None:
+    # CI-only reports are NOT source-controlled baselines: editing them is not a drift fail.
+    for rel in (
+        "assets/generated/reports/mapping-report.json",
+        "assets/generated/reports/exclusion-report.json",
+    ):
+        root = _ws(tmp_path, "ci-" + rel.split("/")[-1])
+        run(["generate", "--workspace", str(root), "--quiet"])
+        p = root / rel
+        p.write_bytes(p.read_bytes().replace(b"[", b"[ ", 1))
+        assert run(["verify-generated", "--workspace", str(root), "--quiet"]) == 0, rel
+
+
+def test_metadata_change_without_regenerate_is_drift(tmp_path: Path) -> None:
+    root = _ws(tmp_path, "stale")
+    run(["generate", "--workspace", str(root), "--quiet"])
+    # change an approved binary + its checksum but do NOT regenerate -> baselines stale
+    png = make_png(140, 140)
+    (root / "assets/source/load-balancer.png").write_bytes(png)
+    meta = root / "assets/metadata/building-load-balancer.json"
+    d = json.loads(meta.read_text("utf-8"))
+    d["checksum_sha256"] = sha256_hex(png)
+    meta.write_text(json.dumps(d), encoding="utf-8")
+    assert run(["verify-generated", "--workspace", str(root), "--quiet"]) == 1
+
+
+def test_reports_byte_stable_and_schema_valid() -> None:
+    s = image_only_scenario()
+    _add_image(s, "tile.legacy.primary", "DEPRECATED")
+    cfg = {
+        "manifest_version": "1",
+        "schema_version": SCHEMA_VERSION,
+        "generator_version": GENERATOR_VERSION,
+        "generator_config_version": GENERATOR_CONFIG_VERSION,
+        "category_fallbacks": s.category_fallbacks,
+    }
+    records = list(s.records.values())
+    a = generator.build_outputs(records, cfg)
+    b = generator.build_outputs(records, cfg)
+    assert a.all_artifact_bytes() == b.all_artifact_bytes()  # A/B byte-stable
+    assert generator.report_schema_problems(a) == []  # required fields, no abs paths
+    # the DEPRECATED asset is recorded (no silent exclusion)
+    assert any(e["asset_id"] == "tile.legacy.primary" for e in a.exclusion_report["exclusions"])
