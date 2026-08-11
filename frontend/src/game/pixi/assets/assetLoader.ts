@@ -23,6 +23,7 @@ export type AssetErrorKind =
   | 'decode'
   | 'checksum_mismatch'
   | 'missing_asset'
+  | 'unsupported' // source type the runtime cannot load yet (e.g. atlas in P3A)
   | 'aborted'
   | 'unknown';
 
