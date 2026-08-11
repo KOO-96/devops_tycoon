@@ -25,6 +25,9 @@ module.exports = {
     'playwright.production-image.config.ts',
     'tests/browser/asset-runtime/vite.config.ts',
     'tests/browser/production-image/vite.config.ts',
+    'playwright.image-dryrun.config.ts',
+    'tests/browser/image-dryrun/vite.config.ts',
+    'tests/browser/image-dryrun/global-setup.ts',
   ],
   rules: {
     'react-hooks/rules-of-hooks': 'error',
