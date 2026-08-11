@@ -14,7 +14,8 @@
     "test:browser:asset-runtime": "playwright test -c playwright.asset-runtime.config.ts",
     "test:browser:visual-c": "playwright test -c playwright.visual-pr-c.config.ts",
     "generate:api": "openapi-typescript ../contracts/openapi/backend-v1.json -o src/api/generated/backend.d.ts",
-    "check:api-drift": "openapi-typescript ../contracts/openapi/backend-v1.json -o /tmp/backend.gen.d.ts && diff -q src/api/generated/backend.d.ts /tmp/backend.gen.d.ts"
+    "check:api-drift": "openapi-typescript ../contracts/openapi/backend-v1.json -o /tmp/backend.gen.d.ts && diff -q src/api/generated/backend.d.ts /tmp/backend.gen.d.ts",
+    "test:browser:production-image": "playwright test -c playwright.production-image.config.ts"
   },
   "dependencies": {
     "pixi.js": "^8.6.6",

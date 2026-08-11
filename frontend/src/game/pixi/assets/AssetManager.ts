@@ -42,6 +42,7 @@ import {
   type AssetLoader,
   type LoadedAsset,
 } from './assetLoader';
+import { ProductionImageAssetLoader, RoutingAssetLoader } from './productionImageLoader';
 import { runWithRetry, type RetryPolicy, type SleepFn } from './retry';
 
 export const MAX_FALLBACK_DEPTH = 3;
@@ -114,7 +115,11 @@ export class AssetManager {
   private readonly lifecycle = new AbortController(); // aborts on disposeAll
 
   constructor(options: AssetManagerOptions = {}) {
-    this.loader = options.loader ?? new GeneratedAssetLoader();
+    // Default: route by sourceType (generated → dev canvas, image → production image
+    // loader, atlas → explicit unsupported error). Injected loaders override this.
+    this.loader =
+      options.loader ??
+      new RoutingAssetLoader(new GeneratedAssetLoader(), new ProductionImageAssetLoader());
     this.sleep = options.sleep;
     this.retryPolicy = options.retryPolicy;
     if (options.registerDevelopmentManifest !== false) {
