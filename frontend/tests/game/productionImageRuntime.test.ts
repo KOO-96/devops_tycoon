@@ -208,4 +208,28 @@ describe('production image loader — targeted follow-up paths', () => {
     expect(textures.length).toBe(1);
     expect(textures[0]!.destroy).toHaveBeenCalled(); // discarded, never registered into a disposed manager
   });
+
+  it('swap peak (FU-008 lifecycle): v1+v2 textures coexist, then v1 is cleaned up (no double-destroy)', async () => {
+    const { decode, textures } = trackingDecode();
+    const fetchImpl = vi.fn(async () => okResponse()); // GOOD bytes → primary both versions
+    const loader = new ProductionImageAssetLoader({ fetchImpl: fetchImpl as unknown as typeof fetch, decode });
+    const mgr = managerWith(loader, manifest(imgEntry(GOOD, '1')));
+
+    const hA = await mgr.acquire('building.a.primary'); // v1 → textures[0]
+    mgr.replaceManifest(manifest(imgEntry(GOOD, '2'))); // v1 marked stale (hA still held)
+    const hB = await mgr.acquire('building.a.primary'); // v2 → textures[1]
+
+    // PEAK: both version textures are resident simultaneously.
+    expect(textures.length).toBe(2);
+    expect(hA.assetVersion).toBe('1');
+    expect(hB.assetVersion).toBe('2');
+    expect(textures[0]!.destroy).not.toHaveBeenCalled();
+    expect(textures[1]!.destroy).not.toHaveBeenCalled();
+
+    // Release v1 → stale cleanup destroys ONLY texture A (no double-destroy); v2 remains.
+    hA.release();
+    expect(textures[0]!.destroy).toHaveBeenCalledTimes(1);
+    expect(textures[1]!.destroy).not.toHaveBeenCalled();
+    hB.release();
+  });
 });
