@@ -1,6 +1,7 @@
 # FU-010 — Hardware GPU Runtime Evidence (Apple Silicon / Metal) (POLICY-C-FU-010)
 
-- Owner: Ops · Status: **POLICY-C-FU-010: MEASURED_PENDING_REVIEW**
+- Owner: Ops · Status: **POLICY-C-FU-010: COMPLETE (review-approved, pending DevCTO sign-off)**
+  · **POLICY-C-FU-008: COMPLETE (review-approved; number PROPOSED, pending DevCTO Budget Confirmation)**
 - Scope: **evidence / test-harness / env only — no product code changed, no production asset.**
 - Goal: verify **Chromium → WebGL2 → ANGLE/Metal → Apple GPU** is actually active (not
   SwiftShader), and that the real DevOps Tycoon runtime + Production Image path render on
@@ -99,22 +100,38 @@ proven on hardware by the passing `production-image` suite (§4). These are
 
 ## 6. Swap lifecycle on hardware (§15) — lifecycle observed, bytes estimated
 
-Raw-GL swap observation on Metal (basis `OLD_PLUS_NEW_RESIDENT_COEXISTENCE`):
+**What was observed (honest scope):** this is a **raw-WebGL2 swap observation** on Metal — real
+Apple-GPU textures created (`gl.createTexture`/`texImage2D`), coexisted, and released
+(`gl.deleteTexture`). It is **not** the `AssetManager.replaceManifest → stale → disposeStale`
+path executed at the GPU level. The real AssetManager version lifecycle (refcounted handles,
+stale marking, `disposeStale`, version isolation) is covered **deterministically** by the vitest
+suite and exercised in-browser (real AssetManager + loader) by the `asset-runtime` /
+`production-image` / `visual-c` suites (§4). What the raw-GL observation adds is the
+**hardware-GPU fact** that old+new textures can coexist and the old can be released on Apple
+Metal with **no GL error and no context loss**.
 
-| Step | Estimated bytes |
-|---|---:|
-| A resident (steady) | 6,291,456 |
-| A + B coexistence (**peak**) | 12,582,912 (12.0 MiB) |
-| release A → B only (post-cleanup == steady(new)) | 6,291,456 |
-| resident ceiling | 67,108,864 (64 MiB) |
-| peak within ceiling | **yes** (12.0 MiB ≤ 64 MiB) |
-| context lost ever | **false** |
+Basis `OLD_PLUS_NEW_RESIDENT_COEXISTENCE`. Two same-size 1536×1024 textures:
+
+| Step | Base bytes (as uploaded, no mip) | Canonical est. incl. mip (×4/3) |
+|---|---:|---:|
+| A resident (steady) | 6,291,456 | 8,388,608 |
+| A + B coexistence (**peak**) | 12,582,912 (12.0 MiB) | **16,777,216 (16.0 MiB)** |
+| release A → B only (post-cleanup == steady(new)) | 6,291,456 | 8,388,608 |
+| resident ceiling | 67,108,864 (64 MiB) | 67,108,864 (64 MiB) |
+| peak within ceiling | yes | **yes (16.0 MiB ≤ 64 MiB, ~48 MiB headroom)** |
+| context lost ever | **false** | **false** |
+
+**Canonical comparison uses the mipmapped estimate:** the policy resident calculation includes
+mip for any texture that opts in, so the FU-008 peak-vs-budget check uses **≈ 16.0 MiB
+mipmapped** (not the 12.0 MiB base). The textures actually uploaded here were **non-mipmapped**
+(no `generateMipmap`), hence the observed base peak is 12.0 MiB; 16.0 MiB is the conservative
+canonical figure. Both are well within the 64 MiB resident ceiling.
 
 Result labels: **`SWAP_LIFECYCLE_HARDWARE_OBSERVED`** + **`SWAP_PEAK_GPU_BYTES_ESTIMATED`**. The
 browser does not expose real VRAM, so the peak is an **estimate** (`w·h·4`, mip `×4/3`), **not**
-`VRAM_MEASURED`. **4096² exception was not applied** (§16 — `BUDGET-RUNTIME-FU-004` OPEN;
-release-before-load orchestration not mechanically guaranteed); only representative
-(≤ resident) textures were exercised.
+`VRAM_MEASURED`. **4096² exception was not applied** (§16 — `BUDGET-RUNTIME-FU-004` OPEN,
+`EXCEPTION_ONLY_BLOCKER`; release-before-load orchestration not mechanically guaranteed); only
+representative (≤ resident) textures were exercised.
 
 ## 7. VRAM honesty (§14)
 
@@ -140,18 +157,29 @@ GPU rendering**, which is satisfied above.
   not request a favicon) run with 0 console errors. **Not** a `FU-010_PAUSED_FOR_PRODUCT_FIX`
   condition; noted for awareness only.
 
-## 10. Status (§19 / §21)
+## 10. Status (§19 / §21) — updated after the FU-008/FU-010 targeted review
 
-- **POLICY-C-FU-010: `MEASURED_PENDING_REVIEW`.** All completion conditions met: Apple Silicon
-  hardware GPU (M4 Max / Metal), **not** SwiftShader, WebGL2 hardware-accelerated, real game
-  render, Production Image loader PASS, Pixi texture PASS, browser regression PASS (asset-runtime
-  / production-image / visual-c), console/page/WebGL errors 0, context loss 0, reference env
-  recorded.
-- **FU-008:** swap **lifecycle now HARDWARE_OBSERVED**, but peak bytes remain
-  `SWAP_PEAK_GPU_BYTES_ESTIMATED` → FU-008 stays `POLICY_DEFINED_PENDING_MEASUREMENT` (no real
-  VRAM measurement possible in-browser).
-- **Budget:** `PROPOSED_TARGETS_WITH_GAPS` (unchanged; nothing promoted to CONFIRMED).
+- **POLICY-C-FU-010: `COMPLETE` (review-approved) — pending DevCTO final sign-off.** All
+  completion conditions met: Apple Silicon hardware GPU (M4 Max / Metal), **not** SwiftShader,
+  WebGL2 hardware-accelerated, real game render, Production Image loader PASS, Pixi texture PASS,
+  browser regression PASS (asset-runtime / production-image / visual-c), console/page/WebGL
+  errors 0, context loss 0, reference env recorded. Exact VRAM measurement is **not** a FU-010
+  completion requirement.
+- **POLICY-C-FU-008: `COMPLETE` (review-approved) — number stays PROPOSED, pending DevCTO
+  Budget Confirmation.** The canonical §5 "DONE when" conditions are all satisfied: method
+  documented + allowed peak bound set (Proposed) + post-cleanup==steady defined + validator/
+  dry-run input contract fixed (via the swap-peak policy, DEFINED_IN_DEV). The canonical
+  contract does **not** require physical GPU/VRAM telemetry, production-size textures, multi-asset
+  steady-state, or a specific reference bundle — so FU-008 is not held pending on any of those.
+  Supporting hardware evidence: `SWAP_LIFECYCLE_HARDWARE_OBSERVED` (raw-GL on Metal) + mipmapped
+  peak ≈ 16.0 MiB ≤ 64 MiB (post-cleanup == steady). Peak bytes remain
+  `SWAP_PEAK_GPU_BYTES_ESTIMATED` — promotion of the number to CONFIRMED is the separate DevCTO
+  Budget Confirmation step, not a FU-008 completion condition.
+- **BUDGET-RUNTIME-FU-004:** `OPEN` — `EXCEPTION_ONLY_BLOCKER` (blocks only a non-coexisting
+  4096² exception swap; **non-blocking** for normal production-image readiness and for FU-008
+  ordinary-coexistence).
+- **Budget:** `PROPOSED_TARGETS_WITH_GAPS` (unchanged; nothing promoted to CONFIRMED — FU-009 +
+  DevCTO Budget Confirmation remain).
 - **First Production Image Technical Readiness:** `NOT_READY` (hardware-env item now satisfied,
-  but budget not CONFIRMED, FU-009 bundle-composition pending, FU-008 peak still estimated, no
-  production assets).
+  but budget not CONFIRMED, FU-009 bundle-composition pending, no production assets).
 - **First Production Image Asset Gate:** **CLOSED** (not opened here).
