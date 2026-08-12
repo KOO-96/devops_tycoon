@@ -1,7 +1,7 @@
 # FU-010 — Hardware GPU Runtime Evidence (Apple Silicon / Metal) (POLICY-C-FU-010)
 
-- Owner: Ops · Status: **POLICY-C-FU-010: COMPLETE (review-approved, pending DevCTO sign-off)**
-  · **POLICY-C-FU-008: COMPLETE (review-approved; number PROPOSED, pending DevCTO Budget Confirmation)**
+- Owner: Ops · Status: **POLICY-C-FU-010: COMPLETE (DevCTO-signed 2026-08-13)** ·
+  **POLICY-C-FU-008: COMPLETE (DevCTO-signed; number remains PROPOSED, pending separate DevCTO Budget Confirmation)**
 - Scope: **evidence / test-harness / env only — no product code changed, no production asset.**
 - Goal: verify **Chromium → WebGL2 → ANGLE/Metal → Apple GPU** is actually active (not
   SwiftShader), and that the real DevOps Tycoon runtime + Production Image path render on
@@ -159,14 +159,14 @@ GPU rendering**, which is satisfied above.
 
 ## 10. Status (§19 / §21) — updated after the FU-008/FU-010 targeted review
 
-- **POLICY-C-FU-010: `COMPLETE` (review-approved) — pending DevCTO final sign-off.** All
+- **POLICY-C-FU-010: `COMPLETE` — DevCTO-signed (2026-08-13), COMPLETE_IN_DEV on merge.** All
   completion conditions met: Apple Silicon hardware GPU (M4 Max / Metal), **not** SwiftShader,
   WebGL2 hardware-accelerated, real game render, Production Image loader PASS, Pixi texture PASS,
   browser regression PASS (asset-runtime / production-image / visual-c), console/page/WebGL
   errors 0, context loss 0, reference env recorded. Exact VRAM measurement is **not** a FU-010
   completion requirement.
-- **POLICY-C-FU-008: `COMPLETE` (review-approved) — number stays PROPOSED, pending DevCTO
-  Budget Confirmation.** The canonical §5 "DONE when" conditions are all satisfied: method
+- **POLICY-C-FU-008: `COMPLETE` — DevCTO-signed (2026-08-13); number stays PROPOSED, pending the
+  separate DevCTO Budget Confirmation.** The canonical §5 "DONE when" conditions are all satisfied: method
   documented + allowed peak bound set (Proposed) + post-cleanup==steady defined + validator/
   dry-run input contract fixed (via the swap-peak policy, DEFINED_IN_DEV). The canonical
   contract does **not** require physical GPU/VRAM telemetry, production-size textures, multi-asset
