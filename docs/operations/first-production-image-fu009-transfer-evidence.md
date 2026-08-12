@@ -1,6 +1,7 @@
 # FU-009 — Representative Transfer Measurement Evidence (POLICY-C-FU-009)
 
-- Owner: Program/Policy · Status: **POLICY-C-FU-009: MEASURED_PENDING_REVIEW**
+- Owner: Program/Policy · Status: **POLICY-C-FU-009: MEASURED_PENDING_BUNDLE_COMPOSITION**
+  (reviewed against the canonical §25 completion contract — see §10; **not COMPLETE**)
 - Scope: **evidence / measurement tooling only — no product code, no production asset.**
 - The 7 images measured here are **NON_PRODUCTION_REPRESENTATIVE_EVIDENCE**. They are
   **not** production assets, are **not** approved/licensed, carry **no** production metadata,
@@ -13,9 +14,10 @@
   server** (no data URL, no base64 inline, no mocked size) for representative game-art-style
   images, across cold / cached / integrity-refetch / transient-retry paths.
 - Does **not** confirm the budget: the canonical transfer target is a **bundle-level**
-  `≤ 8 MiB` figure; a **per-asset** compressed-transfer sub-target is not defined
-  (`TARGET_DEFINITION_REQUIRED`). Does **not** promote any budget to CONFIRMED, does **not**
-  open the First Production Image Asset Gate, and is independent of FU-010 (hardware GPU).
+  `≤ 8 MiB` figure; a **per-asset** compressed-transfer sub-target is **neither defined nor
+  required** by the canonical contract (§10) — **none is invented here**. Does **not** promote
+  any budget to CONFIRMED, does **not** open the First Production Image Asset Gate, and is
+  independent of FU-010 (hardware GPU).
 
 ## 1. Delivered set
 
@@ -35,10 +37,15 @@ overlays (HUD / effects). All 7 were read and measured.
 - **Env:** darwin arm64, Node v25.2.1, local loopback. `measured_at` 2026-08-12T01:54:24Z.
 - Fetch cache modes mirror `ProductionImageAssetLoader`: normal load, then a `cache:'no-store'`
   integrity refetch; transient retry on `5xx`.
+- **Boundaries (per canonical §25):** cold cache; **Content-Encoding = identity (recorded — no
+  gzip/br)**; redirects: none; **Service Worker: none** (Playwright default, no SW registered);
+  response **headers excluded** from the body figures below.
 
-Over-the-wire `transferSize` = body **+ ~300 B** response headers for every 200; a `503`
-transfers only ~300 B (empty body). The tables below report **response-body bytes** (the
-budget-relevant quantity); header overhead is called out separately.
+**Body vs wire — terminology (not conflated):** the tables report **response-body bytes**
+(`encodedBodySize` from `PerformanceResourceTiming`). Over-the-wire `transferSize` was observed
+as body **+ ~300 B** response headers for every 200, and ~300 B for a `503` (empty body). That
+~300 B is an **`ESTIMATED_HTTP_OVERHEAD`** on loopback, **not** a precise wire-level capture; the
+body figures are **not** presented as exact wire-transfer bytes.
 
 ## 3. File analysis — real alpha, not appearance (§2 / §12)
 
@@ -103,9 +110,9 @@ NETWORK_FLOW and GLOW_PARTICLE. Standalone-source priority (HUD / fire / data-st
 §6) all included. None of the 4 sources are opaque, so none is reclassified to
 `OPAQUE_EFFECT_REFERENCE`.
 
-## 6. Transfer evidence (§10 / §13 / §22) — response-body bytes
+## 6. Transfer evidence (§10 / §13 / §22) — response-body bytes (`encodedBodySize`)
 
-| Sample | Category | Resolution | Encoded | Alpha | Cold | Cached | Integrity refetch (total) | Retry (total) | Repr. |
+| Sample | Category | Resolution | Encoded | Alpha | Cold body | Cached body | Integrity refetch (total body) | Retry (total body) | Repr. |
 |---|---|---:|---:|---|---:|---:|---:|---:|---|
 | S1 hud_dashboard | FLAT_UI_LIKE | 1536×1024 | 2,029,840 | TRUE_ALPHA | 2,029,840 | **0** (cache hit) | 4,059,680 | 2,029,840 | YES |
 | S2 network_flow | NETWORK_FLOW_EFFECT | 1536×1024 | 1,496,123 | TRUE_ALPHA | 1,496,123 | **0** | 2,992,246 | 1,496,123 | YES |
@@ -115,12 +122,19 @@ NETWORK_FLOW and GLOW_PARTICLE. Standalone-source priority (HUD / fire / data-st
 | C2 scene_incident_heavy | EFFECT_HEAVY_SCENE | 1672×941 | 2,938,159 | OPAQUE | 2,938,159 | **0** | 5,876,318 | 2,938,159 | YES |
 | C3 scene_cloudscape | DETAILED_BUILDING_ENVIRONMENT | 1672×941 | 2,452,122 | OPAQUE | 2,452,122 | **0** | 4,904,244 | 2,452,122 | YES |
 
-Transfer basis, kept distinct (§10):
+Transfer basis, kept distinct — **never summed into one number** (§10 / §11):
 - **ENCODED_SOURCE_BYTES** = on-disk PNG bytes (= Encoded column).
-- **COLD_HTTP_TRANSFER_BYTES** = cache-miss response body (= Cold column; over-the-wire = body + ~300 B headers).
-- **CACHED_HTTP_TRANSFER_BYTES** = `0` — `max-age` cache hit, `transferSize == 0` (no revalidation).
-- **INTEGRITY_REFETCH_TOTAL_BYTES** = normal fetch + `cache:'no-store'` refetch = **2× body**.
-- **TRANSIENT_RETRY_TOTAL_BYTES** = `503` (0 body, ~300 B headers) + one successful `200` = **1× body**.
+- **COLD_HTTP_BODY_BYTES** = cache-miss response body (= Cold body column). Equals encoded
+  bytes here (identity encoding).
+- **CACHED_HTTP_BODY_BYTES** = `0` — `max-age` cache hit; `encodedBodySize`/`transferSize == 0`,
+  i.e. **no response body re-transferred and no network fetch observed** for the fresh hit.
+  Reported as `CACHE_BODY_TRANSFER = 0`, **not** claimed as "an HTTP layer that can never issue
+  a request."
+- **INTEGRITY_REFETCH_BODY_BYTES** = normal fetch + `cache:'no-store'` refetch = **2× body**.
+- **TRANSIENT_RETRY_BODY_BYTES** = `503` (0 body) + one successful `200` = **1× body**. On the
+  wire the `503` still carries headers, so `RETRY_TOTAL_WIRE_BYTES > RETRY_TOTAL_BODY_BYTES`;
+  they are **not** equated.
+- **ESTIMATED_HTTP_OVERHEAD** ≈ 300 B/response (loopback estimate, not a wire capture).
 
 ### Per-characteristic summary (separate, not cross-averaged)
 - **FLAT_UI_LIKE** (S1): cold 1.94 MiB; integrity 3.87 MiB; retry 1.94 MiB.
@@ -156,11 +170,13 @@ COLD_HTTP_TRANSFER_BYTES.
 | C3 | 2.34 | 29.2% | 5.66 MiB | within (single) |
 
 Honest verdict: **every single sample is < 8 MiB**, but the target governs the **whole critical
-bundle**, not one asset. At ~2.8 MiB each, **three such images would exceed the 8 MiB bundle
-budget**, and an integrity-refetch path already spends up to 5.60 MiB (70% of the bundle budget)
-on one asset. A **per-asset compressed-transfer sub-target is not defined** → the per-asset
-PASS/FAIL is **TARGET_DEFINITION_REQUIRED** (no new number invented here). Bundle-level PASS/FAIL
-is **composition-dependent** and cannot be asserted from single-asset numbers.
+bundle**, not one asset. At ~2.8 MiB each, three such images would exceed the 8 MiB bundle
+budget, and an integrity-refetch path already spends up to 5.60 MiB (70% of the bundle budget)
+on one asset — these are **worst-case illustrations, not real bundle failures**. A **per-asset
+sub-target is not defined and is not required** by the canonical contract (§10); the per-asset
+PASS/FAIL is therefore **N/A** (no number invented). Bundle-level PASS/FAIL is
+`FIRST_PRODUCTION_BUNDLE_EVALUATION_PENDING` — composition-dependent, decided only on a real
+included set.
 
 ## 9. Production boundary (§16)
 
@@ -169,15 +185,46 @@ is **composition-dependent** and cannot be asserted from single-asset numbers.
 - These 7 files = **NON_PRODUCTION_REPRESENTATIVE_EVIDENCE**, stored in git-ignored
   `evidence/fu-009/` (never in the production runtime bundle).
 
-## 10. Status
+## 10. Canonical §25 completion-contract reconciliation
 
-- **POLICY-C-FU-009: `MEASURED_PENDING_REVIEW`** — representative samples secured, ≥3
-  characteristics covered, actual HTTP browser-observed measurement done, transfer basis
-  distinct, encoded sizes + SHA-256 recorded, integrity-refetch + retry measured, per-sample
-  representativeness justified.
-- Budget PASS/FAIL: `TRANSFER_MEASUREMENT_COMPLETE` / **`BUDGET_PASS_FAIL_PENDING_TARGET`**
-  (per-asset compressed-transfer sub-target undefined; bundle verdict composition-dependent).
+The canonical FU-009 completion contract (`production-asset-budget-confirmation.md §6`) is a
+**critical-bundle** contract, **DONE when** "one measurement tool + fixed boundaries are
+specified **and C17 aligns to them**". Reconciled honestly:
+
+| Canonical requirement | This evidence | State |
+|---|---|---|
+| One measurement tool specified | real Node HTTP server + Playwright Chromium 131 + `PerformanceResourceTiming` | **MET** |
+| Actual HTTP download bytes, cold cache | measured per sample (Cold body column) | **MET** |
+| After Content-Encoding (encoding recorded) | identity (no gzip/br) recorded | **MET (identity)** — production may gzip/br; PNG gains ≈0, JSON would compress |
+| Excludes redirects/headers | body basis excludes headers; no redirects | **MET** |
+| Service-Worker disabled or state recorded | no SW registered | **MET (none)** |
+| Includes required **image binaries + atlas JSON + manifest JSON** | only **image binaries** measured (per-image); no manifest/atlas JSON, no assembled bundle | **NOT MET** |
+| Relationship between validator **static** check (**C17**) and browser-measured transfer + allowed delta | partially informed (below); not finalized | **PARTIAL** |
+
+**C17 relationship (partial finding, no number invented):** C17 (`checks.py::c17_bundle_size`)
+sums **on-disk artifact bytes** per critical bundle vs `CRITICAL_TRANSFER_BYTES` (8 MiB). With
+**identity** Content-Encoding, the browser `COLD_HTTP_BODY_BYTES` **equals** the on-disk bytes
+exactly (proven: `decodedBodySize == encodedBodySize == file bytes`), so for **PNG image
+binaries the static↔browser body delta is ~0** (headers excluded). This does **not** finalize
+the contract: the allowed delta must still account for (a) manifest/atlas **JSON** entries
+(which C17 also sums and which *would* compress under gzip/br → browser < static), and (b) the
+production Content-Encoding policy. Finalizing the C17↔browser delta is the remaining
+FU-009 item — **it does not require a per-asset target.**
+
+## 11. Status
+
+- **POLICY-C-FU-009: `MEASURED_PENDING_BUNDLE_COMPOSITION`** (Case B). What is complete:
+  `TRANSFER_BASIS_DEFINED` · `REPRESENTATIVE_MEASUREMENT_COMPLETE` · `MEASUREMENT_TOOL_SPECIFIED`.
+  What remains for canonical DONE: measure the **critical bundle** (image binaries **+ manifest
+  JSON + atlas JSON**) on a **decided included set**, and **finalize the C17 static↔browser
+  delta**. Neither requires a new number.
+- Bundle PASS/FAIL: **`FIRST_PRODUCTION_BUNDLE_EVALUATION_PENDING`** —
+  `PRODUCTION_BUNDLE_COMPOSITION_NOT_YET_DEFINED`. Single-asset "< 8 MiB" is **not** a
+  `BUNDLE_PASS`; "3 scenes > 8 MiB" is only a worst-case illustration, **not** a real failure.
+- **`PER_ASSET_TRANSFER_TARGET: NOT_DEFINED`** — and **not required** by the canonical
+  contract; **no per-asset number is invented** here.
 - Unchanged: Budget = `PROPOSED_TARGETS_WITH_GAPS`; First Production Image Technical Readiness =
-  `NOT_READY`; First Production Image Asset Gate = **CLOSED**; FU-010 =
+  `NOT_READY`; First Production Image Asset Gate = **CLOSED**; FU-008 =
+  `POLICY_DEFINED_PENDING_MEASUREMENT`; FU-010 =
   `BLOCKED_HARDWARE_GPU_ENVIRONMENT_UNAVAILABLE` (separate hardware-GPU track).
 - No product code changed; no production contamination.
