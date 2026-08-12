@@ -1,0 +1,5 @@
+# FU-009 representative-transfer working area: non-production sample binaries,
+# measurement harness, and generated JSON. All evidence numbers + SHA-256 are
+# recorded in docs/operations/first-production-image-fu009-transfer-evidence.md.
+# Kept out of the repo/runtime bundle (non-production representative evidence only).
+/evidence/
