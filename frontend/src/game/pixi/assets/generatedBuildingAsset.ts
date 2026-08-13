@@ -30,15 +30,15 @@ export interface BuildingAssetSpec {
 /**
  * Node kind → stable canonical asset id. The id is manifest-driven: in DEV each is a
  * `generated` placeholder; in PRODUCTION a kind may be served as a real `image` asset
- * under the SAME id. `app_server` is the first production image candidate
- * (`building.app-server.primary`, gated); the others remain dev placeholders until
- * their own production assets pass the gate.
+ * under the SAME id. `app_server` (#001) and `postgresql` (#002) are gated production
+ * image assets; the others remain dev placeholders until their own production assets
+ * pass the gate.
  */
 export const NODE_BUILDING_ASSET_ID: Record<NodeKind, string> = {
   load_balancer: 'building.load-balancer.dev',
   app_server: 'building.app-server.primary',
   redis: 'building.redis.dev',
-  postgresql: 'building.postgresql.dev',
+  postgresql: 'building.database.primary',
 };
 
 export const UNKNOWN_BUILDING_ASSET_ID = 'building.unknown.generated';
@@ -100,37 +100,52 @@ export function buildDevelopmentManifest(version = 'dev-1'): AssetManifest {
   };
 }
 
-/** First production image asset (candidate #001): APP Server Building. Served static
- * PNG; checksum is the canonical `checksum_sha256` from
- * `assets/metadata/building/app-server.json` (verified by the AssetManager on load). */
-export const PRODUCTION_APP_SERVER_SOURCE = '/assets/building/app-server.png';
-export const PRODUCTION_APP_SERVER_CHECKSUM =
-  '5507a77ce21c11eb427d03a44a95a4fe32f906e8be43bb6fe0dc7286af894e96';
+/**
+ * Approved production IMAGE assets, keyed by canonical asset id. Each `source` is the
+ * served static PNG; each `checksum` is the canonical `checksum_sha256` from the asset's
+ * metadata (verified by the AssetManager on load). Add an entry here when a candidate
+ * passes the First Production Image Asset Gate.
+ *   #001 APP Server Building · #002 Database Building
+ */
+export const PRODUCTION_IMAGE_ASSETS: Record<string, { source: string; checksum: string }> = {
+  [NODE_BUILDING_ASSET_ID.app_server]: {
+    source: '/assets/building/app-server.png',
+    checksum: '5507a77ce21c11eb427d03a44a95a4fe32f906e8be43bb6fe0dc7286af894e96',
+  },
+  [NODE_BUILDING_ASSET_ID.postgresql]: {
+    source: '/assets/building/database.png',
+    checksum: '1fa594411c7949d5427d9ca4178631bcff6c9fb44724e05a6d79d859f7f1557d',
+  },
+};
+
+// Back-compat named exports (candidate #001).
+export const PRODUCTION_APP_SERVER_SOURCE = PRODUCTION_IMAGE_ASSETS[NODE_BUILDING_ASSET_ID.app_server]!.source;
+export const PRODUCTION_APP_SERVER_CHECKSUM = PRODUCTION_IMAGE_ASSETS[NODE_BUILDING_ASSET_ID.app_server]!.checksum;
 
 /**
- * Runtime PRODUCTION manifest. Identical to the development manifest except the
- * `app_server` kind is served as the real production IMAGE asset
- * `building.app-server.primary` (source_type `image`, checksum-verified by
- * ProductionImageAssetLoader). All other kinds remain generated placeholders until
- * their own production assets pass the gate. The generated fallback chain
- * (building → unknown → universal) still applies if the image ever fails to load.
+ * Runtime PRODUCTION manifest. Identical to the development manifest except each kind
+ * with an approved production IMAGE asset (see `PRODUCTION_IMAGE_ASSETS`) is served as a
+ * real `image` entry (checksum-verified by ProductionImageAssetLoader). Kinds without a
+ * production asset remain generated placeholders. The generated fallback chain
+ * (building → unknown → universal) still applies if an image ever fails to load.
  */
 export function buildProductionManifest(version = 'prod-1'): AssetManifest {
   const dev = buildDevelopmentManifest(version);
-  const assets = dev.assets.map((e): AssetManifestEntry =>
-    e.assetId === NODE_BUILDING_ASSET_ID.app_server
+  const assets = dev.assets.map((e): AssetManifestEntry => {
+    const prod = PRODUCTION_IMAGE_ASSETS[e.assetId];
+    return prod
       ? {
           assetId: e.assetId,
           category: 'building',
           sourceType: 'image',
-          source: PRODUCTION_APP_SERVER_SOURCE,
-          checksum: PRODUCTION_APP_SERVER_CHECKSUM,
+          source: prod.source,
+          checksum: prod.checksum,
           assetVersion: '1',
           anchor: { x: 0.5, y: 1 },
           footprint: { width: 1, height: 1 },
         }
-      : e,
-  );
+      : e;
+  });
   return {
     manifestVersion: version,
     assets,

@@ -8,6 +8,15 @@
       "runtime_checksum": "5507a77ce21c11eb427d03a44a95a4fe32f906e8be43bb6fe0dc7286af894e96",
       "runtime_manifest_index": 0,
       "runtime_source": "assets/source/building/app-server.png"
+    },
+    {
+      "asset_id": "building.database.primary",
+      "asset_version": "1",
+      "exclusion_reason_code": null,
+      "included": true,
+      "runtime_checksum": "1fa594411c7949d5427d9ca4178631bcff6c9fb44724e05a6d79d859f7f1557d",
+      "runtime_manifest_index": 1,
+      "runtime_source": "assets/source/building/database.png"
     }
   ]
 }

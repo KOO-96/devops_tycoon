@@ -16,6 +16,23 @@
       },
       "source": "assets/source/building/app-server.png",
       "sourceType": "image"
+    },
+    {
+      "anchor": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "assetId": "building.database.primary",
+      "assetVersion": "1",
+      "bundleId": "critical-core",
+      "category": "building",
+      "checksum": "1fa594411c7949d5427d9ca4178631bcff6c9fb44724e05a6d79d859f7f1557d",
+      "footprint": {
+        "height": 1,
+        "width": 1
+      },
+      "source": "assets/source/building/database.png",
+      "sourceType": "image"
     }
   ],
   "categoryFallbacks": {},
