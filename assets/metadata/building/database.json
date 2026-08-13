@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0.0",
+  "metadata_version": "1",
+  "asset_id": "building.database.primary",
+  "asset_version": "1",
+  "category": "building",
+  "source_type": "image",
+  "source_path": "assets/source/building/database.png",
+  "checksum_sha256": "1fa594411c7949d5427d9ca4178631bcff6c9fb44724e05a6d79d859f7f1557d",
+  "bundle": "critical-core",
+  "semantic_role": "building-structure",
+  "license_type": "company_owned",
+  "license_reference": "docs/operations/first-production-image-candidate-002.md#license",
+  "source_provenance": {
+    "origin_type": "original_internal",
+    "creator": "DevOps Tycoon project - procedural asset tooling",
+    "created_at": "2026-08-13T00:00:00+00:00",
+    "human_reviewed": true,
+    "reference_usage": "none",
+    "transformation_notes": "Deterministic isometric stacked-cylinder database render (PIL, no randomness, no external reference image). Distinct DB motif vs the APP server rack."
+  },
+  "approval_state": "APPROVED_FOR_PRODUCTION",
+  "production_approved": true,
+  "approval": {
+    "approval_state": "APPROVED_FOR_PRODUCTION",
+    "reviewed_asset_version": "1",
+    "approval_scope": "production",
+    "approved_by": "internal-asset-governance",
+    "approved_at": "2026-08-13T00:00:00+00:00",
+    "rights_review_reference": "docs/operations/first-production-image-candidate-002.md#rights-review",
+    "technical_review_reference": "docs/operations/first-production-image-candidate-002.md#technical-review",
+    "review_notes": "Candidate #002 internal asset-governance approval (project-owned procedural art). Final release is the DevCTO asset review; first Image Gate is already OPEN_IN_DEV."
+  },
+  "anchor": { "x": 0.5, "y": 1.0 },
+  "footprint": { "width": 1, "height": 1 }
+}
