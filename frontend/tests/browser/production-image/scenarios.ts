@@ -5,6 +5,7 @@
  * createImageBitmap → Pixi Texture). No production asset binary is committed.
  */
 
+import { Application, Sprite } from 'pixi.js';
 import { AssetManager } from '../../../src/game/pixi/assets/AssetManager';
 import { WebCryptoChecksumVerifier } from '../../../src/game/pixi/assets/assetLoader';
 import type { AssetManifest, AssetManifestEntry } from '../../../src/game/pixi/assets/assetTypes';
@@ -185,9 +186,53 @@ async function scAtlasUnsupported(): Promise<ScenarioResult> {
   }
 }
 
+/**
+ * Real-frame render: load an opaque image via the REAL loader, put it on a Sprite, and
+ * actually RENDER a WebGL2 frame — this triggers Pixi v8's lazy GPU upload (the exact
+ * point the ImageBitmap-lifetime bug corrupted). Reading back the pixels asserts the
+ * sprite is non-empty. On the buggy code the source was detached at upload and the
+ * sprite rendered fully transparent (0 opaque pixels). This is the render evidence unit
+ * tests can't provide.
+ */
+async function scRealFrameRender(): Promise<ScenarioResult> {
+  const bytes = await makePngBytes('#e33'); // fully-opaque red
+  const url = objectUrl(bytes);
+  const mgr = newManager(manifest(imageEntry(url, await sha256hex(bytes))));
+  const app = new Application();
+  const checks: Check[] = [];
+  try {
+    const h = await mgr.acquire('building.hero.primary');
+    checks.push({ label: 'primary (not fallback)', ok: h.fallback === false, got: h.fallback });
+    await app.init({ width: 16, height: 16, preference: 'webgl', backgroundAlpha: 0 });
+    const sprite = new Sprite(h.texture ?? undefined);
+    sprite.width = 16;
+    sprite.height = 16;
+    app.stage.addChild(sprite);
+    app.render(); // lazy GPU upload happens here
+    const out = app.renderer.extract.pixels(app.stage);
+    let opaque = 0;
+    let red = 0;
+    for (let i = 0; i < out.pixels.length; i += 4) {
+      const r = out.pixels[i] ?? 0;
+      const a = out.pixels[i + 3] ?? 0;
+      if (a > 0) opaque++;
+      if (r > 120 && a > 0) red++;
+    }
+    checks.push({ label: 'sprite renders non-empty pixels', ok: opaque > 0, got: opaque });
+    checks.push({ label: 'renders the image color (red)', ok: red > 0, got: red });
+    h.release();
+  } finally {
+    URL.revokeObjectURL(url);
+    app.destroy(true, { children: true });
+    await mgr.disposeAll();
+  }
+  return result('real_frame_render', checks);
+}
+
 export async function runProductionImageScenarios(): Promise<ScenarioResult[]> {
   return [
     await scSuccess(),
+    await scRealFrameRender(),
     await scChecksumMismatchFallback(),
     await scHttp404(),
     await scConcurrent(),

@@ -12,9 +12,12 @@ interface ResultsPayload {
 
 test('production image loader: fetch/checksum/decode/fallback in real WebGL2', async ({ page }) => {
   const pageErrors: string[] = [];
+  const detachedWarnings: string[] = [];
   page.on('pageerror', (e) => pageErrors.push(`pageerror:${e.message}`));
   page.on('console', (m) => {
     if (m.type() === 'error') pageErrors.push(`console:${m.text()}`);
+    // The ImageBitmap-lifetime bug surfaced ONLY as a WebGL warning, never an error.
+    if (/detached/i.test(m.text())) detachedWarnings.push(m.text());
   });
 
   await page.goto('/');
@@ -34,6 +37,7 @@ test('production image loader: fetch/checksum/decode/fallback in real WebGL2', a
   }
   expect(results.scenarios.map((s) => s.name)).toEqual([
     'image_success',
+    'real_frame_render',
     'checksum_mismatch_fallback',
     'http_404_terminal',
     'concurrent_acquire',
@@ -43,5 +47,6 @@ test('production image loader: fetch/checksum/decode/fallback in real WebGL2', a
   ]);
   expect(results.errors, 'no in-page errors').toEqual([]);
   expect(pageErrors, 'no page/console errors').toEqual([]);
+  expect(detachedWarnings, 'no "source data has been detached" WebGL warning').toEqual([]);
   expect(results.allOk).toBe(true);
 });
