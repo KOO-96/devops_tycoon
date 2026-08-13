@@ -41,7 +41,18 @@ export interface ProductionImageLoaderDeps {
   decode?: ImageDecoder;
 }
 
-/** Default decoder: createImageBitmap → Texture. Cleans up the bitmap/blob URL. */
+/**
+ * Default decoder: createImageBitmap → Texture.
+ *
+ * ImageBitmap lifetime (PixiJS v8): the GPU upload of a texture source is **lazy** —
+ * it happens on the first render, not at `Texture.from(...)`. Closing the ImageBitmap
+ * eagerly therefore detaches the source before it is uploaded
+ * (`texSubImage2D: The source data has been detached`) and the sprite renders empty.
+ * Ownership rule: the `TextureSource` owns the ImageBitmap for its whole lifetime; the
+ * bitmap is released **exactly once** when the AssetManager destroys the texture
+ * (`texture.destroy(true)` → `source.destroy()` emits `'destroy'`). Pixi itself does
+ * not close the bitmap, so there is no double-close. No timing hacks, no renderer coupling.
+ */
 async function defaultDecode(
   bytes: Uint8Array,
   contentType: string | null,
@@ -51,15 +62,20 @@ async function defaultDecode(
   const type = contentType && contentType.startsWith('image/') ? contentType : 'image/png';
   const blob = new Blob([bytes as unknown as BlobPart], { type });
   if (typeof createImageBitmap === 'function') {
-    let bitmap: ImageBitmap | null = null;
+    let bitmap: ImageBitmap;
     try {
       bitmap = await createImageBitmap(blob);
-      const texture = Texture.from(bitmap);
-      return texture;
     } catch (err) {
       throw new AssetLoadError('decode', `image decode failed: ${String(err)}`, { retryable: false });
-    } finally {
-      bitmap?.close?.();
+    }
+    try {
+      const texture = Texture.from(bitmap);
+      // Release the bitmap only when Pixi is done with the source (after upload).
+      texture.source.once('destroy', () => bitmap.close());
+      return texture;
+    } catch (err) {
+      bitmap.close(); // Texture.from failed → nothing owns the bitmap; release now.
+      throw new AssetLoadError('decode', `texture creation failed: ${String(err)}`, { retryable: false });
     }
   }
   // Fallback path (no createImageBitmap): HTMLImageElement + object URL.
