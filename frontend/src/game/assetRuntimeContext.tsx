@@ -10,6 +10,7 @@
 
 import { createContext, useContext, useEffect, useRef, type ReactNode } from 'react';
 import { AssetManager } from './pixi/assets/AssetManager';
+import { buildProductionManifest } from './pixi/assets/generatedBuildingAsset';
 
 const AssetRuntimeContext = createContext<AssetManager | null>(null);
 
@@ -42,7 +43,10 @@ export function AssetRuntimeProvider({
       const slot = hmrSlot();
       // Reuse (and reset) a manager left over from a previous HMR cycle.
       const prior = slot?.manager ?? null;
-      const created = new AssetManager();
+      // Real app uses the PRODUCTION manifest (app_server = first production image asset);
+      // the generated fallback chain still covers a load failure.
+      const created = new AssetManager({ registerDevelopmentManifest: false });
+      created.registerManifest(buildProductionManifest());
       if (prior) void prior.disposeAll();
       ref.current = created;
       if (slot) slot.manager = created;
