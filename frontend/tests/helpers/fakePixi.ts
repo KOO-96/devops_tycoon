@@ -76,12 +76,43 @@ export class Text extends Container {
   }
 }
 
+/** Minimal TextureSource event surface (Pixi v8 emits `'destroy'` when the source is
+ * destroyed). Models the resource-ownership lifecycle used by ProductionImageAssetLoader. */
+export interface FakeTextureSource {
+  handlers: Record<string, Array<(s: unknown) => void>>;
+  once(ev: string, cb: (s: unknown) => void): void;
+  emit(ev: string, s?: unknown): void;
+}
+
+function makeTextureSource(): FakeTextureSource {
+  const handlers: Record<string, Array<(s: unknown) => void>> = {};
+  return {
+    handlers,
+    once(ev, cb) {
+      (handlers[ev] ??= []).push(cb);
+    },
+    emit(ev, s) {
+      const list = handlers[ev] ?? [];
+      handlers[ev] = []; // once semantics: fire then clear (no double-fire)
+      for (const cb of list) cb(s);
+    },
+  };
+}
+
 export interface FakeTexture {
+  source: FakeTextureSource;
   destroy: (value?: boolean) => void;
 }
 
 export const Texture = {
-  from: vi.fn((): FakeTexture => ({ destroy: vi.fn() })),
+  from: vi.fn((): FakeTexture => {
+    const source = makeTextureSource();
+    // Real Pixi: `texture.destroy(true)` destroys the source, which emits `'destroy'`.
+    const destroy = vi.fn((destroySource?: boolean) => {
+      if (destroySource) source.emit('destroy', source);
+    });
+    return { source, destroy };
+  }),
 };
 
 export class Sprite extends Container {
