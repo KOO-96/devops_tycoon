@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "asset_id": "building.app-server.primary",
+      "asset_version": "1",
+      "exclusion_reason_code": null,
+      "included": true,
+      "runtime_checksum": "5507a77ce21c11eb427d03a44a95a4fe32f906e8be43bb6fe0dc7286af894e96",
+      "runtime_manifest_index": 0,
+      "runtime_source": "assets/source/building/app-server.png"
+    }
+  ]
+}

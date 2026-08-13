@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0.0",
+  "metadata_version": "1",
+  "asset_id": "building.app-server.primary",
+  "asset_version": "1",
+  "category": "building",
+  "source_type": "image",
+  "source_path": "assets/source/building/app-server.png",
+  "checksum_sha256": "5507a77ce21c11eb427d03a44a95a4fe32f906e8be43bb6fe0dc7286af894e96",
+  "bundle": "critical-core",
+  "semantic_role": "building-structure",
+  "license_type": "company_owned",
+  "license_reference": "docs/operations/first-production-image-candidate-001.md#license",
+  "source_provenance": {
+    "origin_type": "original_internal",
+    "creator": "DevOps Tycoon project - procedural asset tooling",
+    "created_at": "2026-08-13T00:00:00+00:00",
+    "human_reviewed": true,
+    "reference_usage": "none",
+    "transformation_notes": "Deterministic isometric server-building render (PIL, no randomness, no external reference image)."
+  },
+  "approval_state": "APPROVED_FOR_PRODUCTION",
+  "production_approved": true,
+  "approval": {
+    "approval_state": "APPROVED_FOR_PRODUCTION",
+    "reviewed_asset_version": "1",
+    "approval_scope": "production",
+    "approved_by": "internal-asset-governance",
+    "approved_at": "2026-08-13T00:00:00+00:00",
+    "rights_review_reference": "docs/operations/first-production-image-candidate-001.md#rights-review",
+    "technical_review_reference": "docs/operations/first-production-image-candidate-001.md#technical-review",
+    "review_notes": "Candidate #001 internal asset-governance approval (project-owned procedural art). Final release-gate open is the separate DevCTO Gate Review."
+  },
+  "anchor": { "x": 0.5, "y": 1.0 },
+  "footprint": { "width": 1, "height": 1 }
+}
