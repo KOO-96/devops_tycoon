@@ -10,12 +10,21 @@
       "runtime_source": "assets/source/building/app-server.png"
     },
     {
+      "asset_id": "building.cache.primary",
+      "asset_version": "1",
+      "exclusion_reason_code": null,
+      "included": true,
+      "runtime_checksum": "c8b04ee398af791b3ef5f3edd324d15f9dd226d14f39006d99eb92adc3559d35",
+      "runtime_manifest_index": 1,
+      "runtime_source": "assets/source/building/cache.png"
+    },
+    {
       "asset_id": "building.database.primary",
       "asset_version": "1",
       "exclusion_reason_code": null,
       "included": true,
       "runtime_checksum": "1fa594411c7949d5427d9ca4178631bcff6c9fb44724e05a6d79d859f7f1557d",
-      "runtime_manifest_index": 1,
+      "runtime_manifest_index": 2,
       "runtime_source": "assets/source/building/database.png"
     }
   ]

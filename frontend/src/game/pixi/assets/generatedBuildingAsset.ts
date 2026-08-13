@@ -37,7 +37,7 @@ export interface BuildingAssetSpec {
 export const NODE_BUILDING_ASSET_ID: Record<NodeKind, string> = {
   load_balancer: 'building.load-balancer.dev',
   app_server: 'building.app-server.primary',
-  redis: 'building.redis.dev',
+  redis: 'building.cache.primary',
   postgresql: 'building.database.primary',
 };
 
@@ -115,6 +115,10 @@ export const PRODUCTION_IMAGE_ASSETS: Record<string, { source: string; checksum:
   [NODE_BUILDING_ASSET_ID.postgresql]: {
     source: '/assets/building/database.png',
     checksum: '1fa594411c7949d5427d9ca4178631bcff6c9fb44724e05a6d79d859f7f1557d',
+  },
+  [NODE_BUILDING_ASSET_ID.redis]: {
+    source: '/assets/building/cache.png',
+    checksum: 'c8b04ee398af791b3ef5f3edd324d15f9dd226d14f39006d99eb92adc3559d35',
   },
 };
 
