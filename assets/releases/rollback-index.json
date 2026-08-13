@@ -7,6 +7,10 @@
           "asset_version": "1"
         },
         {
+          "asset_id": "building.cache.primary",
+          "asset_version": "1"
+        },
+        {
           "asset_id": "building.database.primary",
           "asset_version": "1"
         }
