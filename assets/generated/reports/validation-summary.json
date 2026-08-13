@@ -7,10 +7,10 @@
     "assets/generated/reports/validation-summary.json",
     "assets/releases/rollback-index.json"
   ],
-  "build_id": "f74d814522f19cb118d229b8ea145706bb00707c34f8e4c523b3065d5389ca3d",
+  "build_id": "9d9e81993713524b1db69f631621bf073637338f5018f83d76e811e8c8376d81",
   "excluded": 0,
-  "generated_total": 2,
+  "generated_total": 3,
   "hard_error_messages": [],
   "hard_errors": 0,
-  "included": 2
+  "included": 3
 }

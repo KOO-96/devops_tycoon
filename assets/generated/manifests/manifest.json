@@ -22,6 +22,23 @@
         "x": 0.5,
         "y": 1.0
       },
+      "assetId": "building.cache.primary",
+      "assetVersion": "1",
+      "bundleId": "critical-core",
+      "category": "building",
+      "checksum": "c8b04ee398af791b3ef5f3edd324d15f9dd226d14f39006d99eb92adc3559d35",
+      "footprint": {
+        "height": 1,
+        "width": 1
+      },
+      "source": "assets/source/building/cache.png",
+      "sourceType": "image"
+    },
+    {
+      "anchor": {
+        "x": 0.5,
+        "y": 1.0
+      },
       "assetId": "building.database.primary",
       "assetVersion": "1",
       "bundleId": "critical-core",
