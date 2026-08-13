@@ -27,10 +27,16 @@ export interface BuildingAssetSpec {
   readonly kind: typeof DEVELOPMENT_PLACEHOLDER_NOT_FINAL_ART;
 }
 
-/** Node kind → development asset id (single source of the mapping). */
+/**
+ * Node kind → stable canonical asset id. The id is manifest-driven: in DEV each is a
+ * `generated` placeholder; in PRODUCTION a kind may be served as a real `image` asset
+ * under the SAME id. `app_server` is the first production image candidate
+ * (`building.app-server.primary`, gated); the others remain dev placeholders until
+ * their own production assets pass the gate.
+ */
 export const NODE_BUILDING_ASSET_ID: Record<NodeKind, string> = {
   load_balancer: 'building.load-balancer.dev',
-  app_server: 'building.app-server.dev',
+  app_server: 'building.app-server.primary',
   redis: 'building.redis.dev',
   postgresql: 'building.postgresql.dev',
 };
@@ -91,6 +97,44 @@ export function buildDevelopmentManifest(version = 'dev-1'): AssetManifest {
       building: UNKNOWN_BUILDING_ASSET_ID,
       fallback: UNIVERSAL_FALLBACK_ASSET_ID,
     },
+  };
+}
+
+/** First production image asset (candidate #001): APP Server Building. Served static
+ * PNG; checksum is the canonical `checksum_sha256` from
+ * `assets/metadata/building/app-server.json` (verified by the AssetManager on load). */
+export const PRODUCTION_APP_SERVER_SOURCE = '/assets/building/app-server.png';
+export const PRODUCTION_APP_SERVER_CHECKSUM =
+  '5507a77ce21c11eb427d03a44a95a4fe32f906e8be43bb6fe0dc7286af894e96';
+
+/**
+ * Runtime PRODUCTION manifest. Identical to the development manifest except the
+ * `app_server` kind is served as the real production IMAGE asset
+ * `building.app-server.primary` (source_type `image`, checksum-verified by
+ * ProductionImageAssetLoader). All other kinds remain generated placeholders until
+ * their own production assets pass the gate. The generated fallback chain
+ * (building → unknown → universal) still applies if the image ever fails to load.
+ */
+export function buildProductionManifest(version = 'prod-1'): AssetManifest {
+  const dev = buildDevelopmentManifest(version);
+  const assets = dev.assets.map((e): AssetManifestEntry =>
+    e.assetId === NODE_BUILDING_ASSET_ID.app_server
+      ? {
+          assetId: e.assetId,
+          category: 'building',
+          sourceType: 'image',
+          source: PRODUCTION_APP_SERVER_SOURCE,
+          checksum: PRODUCTION_APP_SERVER_CHECKSUM,
+          assetVersion: '1',
+          anchor: { x: 0.5, y: 1 },
+          footprint: { width: 1, height: 1 },
+        }
+      : e,
+  );
+  return {
+    manifestVersion: version,
+    assets,
+    ...(dev.categoryFallbacks ? { categoryFallbacks: dev.categoryFallbacks } : {}),
   };
 }
 

@@ -1,0 +1,16 @@
+{
+  "artifacts": [
+    "assets/generated/build-metadata.json",
+    "assets/generated/manifests/manifest.json",
+    "assets/generated/reports/exclusion-report.json",
+    "assets/generated/reports/mapping-report.json",
+    "assets/generated/reports/validation-summary.json",
+    "assets/releases/rollback-index.json"
+  ],
+  "build_id": "852b76b79185b75c483fff63c63036f08f86094473f0d7edd1fede90c07f390a",
+  "excluded": 0,
+  "generated_total": 1,
+  "hard_error_messages": [],
+  "hard_errors": 0,
+  "included": 1
+}

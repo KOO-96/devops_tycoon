@@ -1,0 +1,14 @@
+{
+  "candidates": [
+    {
+      "assets": [
+        {
+          "asset_id": "building.app-server.primary",
+          "asset_version": "1"
+        }
+      ],
+      "eligible": true,
+      "manifest_version": "1"
+    }
+  ]
+}

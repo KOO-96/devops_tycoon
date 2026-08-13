@@ -1,0 +1,23 @@
+{
+  "assets": [
+    {
+      "anchor": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "assetId": "building.app-server.primary",
+      "assetVersion": "1",
+      "bundleId": "critical-core",
+      "category": "building",
+      "checksum": "5507a77ce21c11eb427d03a44a95a4fe32f906e8be43bb6fe0dc7286af894e96",
+      "footprint": {
+        "height": 1,
+        "width": 1
+      },
+      "source": "assets/source/building/app-server.png",
+      "sourceType": "image"
+    }
+  ],
+  "categoryFallbacks": {},
+  "manifestVersion": "1"
+}
