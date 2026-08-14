@@ -67,6 +67,15 @@
       },
       "source": "assets/source/building/load-balancer.png",
       "sourceType": "image"
+    },
+    {
+      "assetId": "effect.network-flow.primary",
+      "assetVersion": "1",
+      "bundleId": "critical-core",
+      "category": "effect",
+      "checksum": "d4c2dd4e7873479cc6ceff00394c28c7149561d468bb0f56d65b257b122b56e9",
+      "source": "assets/source/effect/network-flow.png",
+      "sourceType": "image"
     }
   ],
   "categoryFallbacks": {},
