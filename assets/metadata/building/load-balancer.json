@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0.0",
+  "metadata_version": "1",
+  "asset_id": "building.load-balancer.primary",
+  "asset_version": "1",
+  "category": "building",
+  "source_type": "image",
+  "source_path": "assets/source/building/load-balancer.png",
+  "checksum_sha256": "02f2545655c6fbe2bb3c4f6399bd57b07d45a5c00fd99d20f0a19d71db6aa9ff",
+  "bundle": "critical-core",
+  "semantic_role": "building-structure",
+  "license_type": "company_owned",
+  "license_reference": "docs/operations/first-production-image-candidate-004.md#license",
+  "source_provenance": {
+    "origin_type": "original_internal",
+    "creator": "DevOps Tycoon project - procedural asset tooling",
+    "created_at": "2026-08-14T00:00:00+00:00",
+    "human_reviewed": true,
+    "reference_usage": "none",
+    "transformation_notes": "Deterministic isometric routing-hub load-balancer render (PIL, no randomness, no external reference, no vendor logo/trademark). Distinct one-to-many routing motif + blue palette vs APP/DB/Cache."
+  },
+  "approval_state": "APPROVED_FOR_PRODUCTION",
+  "production_approved": true,
+  "approval": {
+    "approval_state": "APPROVED_FOR_PRODUCTION",
+    "reviewed_asset_version": "1",
+    "approval_scope": "production",
+    "approved_by": "internal-asset-governance",
+    "approved_at": "2026-08-14T00:00:00+00:00",
+    "rights_review_reference": "docs/operations/first-production-image-candidate-004.md#rights-review",
+    "technical_review_reference": "docs/operations/first-production-image-candidate-004.md#technical-review",
+    "review_notes": "Candidate #004 internal asset-governance approval (project-owned procedural art, no vendor brand). Release is the DevCTO asset review; Image Gate already OPEN_IN_DEV."
+  },
+  "anchor": { "x": 0.5, "y": 1.0 },
+  "footprint": { "width": 1, "height": 1 }
+}
