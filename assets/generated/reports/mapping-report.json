@@ -26,6 +26,15 @@
       "runtime_checksum": "1fa594411c7949d5427d9ca4178631bcff6c9fb44724e05a6d79d859f7f1557d",
       "runtime_manifest_index": 2,
       "runtime_source": "assets/source/building/database.png"
+    },
+    {
+      "asset_id": "building.load-balancer.primary",
+      "asset_version": "1",
+      "exclusion_reason_code": null,
+      "included": true,
+      "runtime_checksum": "02f2545655c6fbe2bb3c4f6399bd57b07d45a5c00fd99d20f0a19d71db6aa9ff",
+      "runtime_manifest_index": 3,
+      "runtime_source": "assets/source/building/load-balancer.png"
     }
   ]
 }
