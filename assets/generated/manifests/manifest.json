@@ -50,6 +50,23 @@
       },
       "source": "assets/source/building/database.png",
       "sourceType": "image"
+    },
+    {
+      "anchor": {
+        "x": 0.5,
+        "y": 1.0
+      },
+      "assetId": "building.load-balancer.primary",
+      "assetVersion": "1",
+      "bundleId": "critical-core",
+      "category": "building",
+      "checksum": "02f2545655c6fbe2bb3c4f6399bd57b07d45a5c00fd99d20f0a19d71db6aa9ff",
+      "footprint": {
+        "height": 1,
+        "width": 1
+      },
+      "source": "assets/source/building/load-balancer.png",
+      "sourceType": "image"
     }
   ],
   "categoryFallbacks": {},
