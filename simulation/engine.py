@@ -121,10 +121,27 @@ def _process_tick(state: GameState, config: BalanceConfig) -> TickTraffic:
     traffic.generated = generated
     traffic.retried = retry_in
 
-    per_server, routed, dropped = _route(state, generated)
+    per_server, routed, dropped, edge_routed = _route(state, generated)
     traffic.per_server_routed = per_server
     traffic.routed = routed
     traffic.dropped_no_server = dropped
+    # Observation-only: emit one aggregated REQUEST_ROUTED per (tick, source, target)
+    # edge the load balancer actually routed to this tick. This is the authoritative
+    # source->target routing decision (a real LB->app-server connection edge); it does
+    # not read RNG, mutate state, or feed back into the simulation.
+    for source_id, target_id, count in edge_routed:
+        state.events.emit(
+            DomainEvent(
+                state.clock.tick,
+                DomainEventType.REQUEST_ROUTED,
+                target=target_id,
+                detail={
+                    "source_node_id": source_id,
+                    "target_node_id": target_id,
+                    "count": count,
+                },
+            )
+        )
     if dropped > 0:
         state.events.emit(
             DomainEvent(
@@ -151,13 +168,26 @@ def _process_tick(state: GameState, config: BalanceConfig) -> TickTraffic:
     return traffic
 
 
-def _route(state: GameState, generated: int) -> tuple[dict[str, int], int, int]:
+def _route(
+    state: GameState, generated: int
+) -> tuple[dict[str, int], int, int, list[tuple[str, str, int]]]:
+    """Route generated traffic to app servers.
+
+    Returns ``(per_server, routed, dropped, edge_routed)``. ``edge_routed`` is a
+    deterministically ordered list of ``(source_node_id, target_node_id, count)``
+    for each real LB->app-server connection edge that received ``count >= 1``
+    requests this tick — the authoritative per-edge routing decision. Edges that
+    routed zero (or a server unavailable to the LB) are omitted. The direct
+    fallback branch (no load balancer) has no routing *source* node and therefore
+    contributes no edge routes.
+    """
     per_server: dict[str, int] = {sid: 0 for sid in state.app_servers}
+    edge_routed: list[tuple[str, str, int]] = []
 
     if state.load_balancers:
         enabled_lbs = [lb for lb in state.load_balancers.values() if lb.enabled]
         if not enabled_lbs:
-            return per_server, 0, generated
+            return per_server, 0, generated, edge_routed
         shares = _split_evenly(generated, len(enabled_lbs))
         for lb, share in zip(enabled_lbs, shares, strict=True):
             servers = state.app_servers_behind(lb.id)
@@ -165,17 +195,19 @@ def _route(state: GameState, generated: int) -> tuple[dict[str, int], int, int]:
             lb.rr_cursor = new_cursor
             for sid, cnt in counts.items():
                 per_server[sid] = per_server.get(sid, 0) + cnt
+                if cnt > 0:
+                    edge_routed.append((lb.id, sid, cnt))
     else:
         available = [s for s in state.app_servers.values() if s.is_available()]
         if not available:
-            return per_server, 0, generated
+            return per_server, 0, generated, edge_routed
         shares = _split_evenly(generated, len(available))
         for server, share in zip(available, shares, strict=True):
             per_server[server.id] = per_server.get(server.id, 0) + share
 
     routed = sum(per_server.values())
     dropped = generated - routed
-    return per_server, routed, dropped
+    return per_server, routed, dropped, edge_routed
 
 
 def _split_evenly(total: int, parts: int) -> list[int]:
